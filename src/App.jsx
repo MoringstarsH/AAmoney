@@ -100,7 +100,7 @@ function App() {
           );
         })}
       </div>
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+      <div className="absolute bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-0 right-0 flex justify-center">
         <Button onClick={() => { setNewTripName(''); setView('createTrip'); }} className="shadow-xl shadow-indigo-500/40 px-8 w-2/3 bg-slate-800 hover:bg-slate-900" icon={Plus}>新建账单</Button>
       </div>
     </div>
@@ -166,7 +166,7 @@ function App() {
               </button>
             </div> ); })}</div> )}
       </div>
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+      <div className="absolute bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-0 right-0 flex justify-center">
         <Button onClick={() => { setNewExpense({ amount: '', description: '', payerId: activeTrip.members[0]?.id, beneficiaryIds: activeTrip.members.map(m => m.id) }); setView('addExpense'); }} className="shadow-xl shadow-indigo-500/40 px-8 w-2/3" icon={Plus}>记一笔</Button>
       </div>
     </div>
@@ -227,13 +227,13 @@ function App() {
   ); };
 
   return (
-    <div className="w-full min-h-screen bg-[#eff3f9] flex items-center justify-center font-sans text-slate-800 p-4">
+    <div className="w-full min-h-screen bg-[#eff3f9] flex items-center justify-center font-sans text-slate-800 md:p-4">
       {warningMessage && (<div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-xl transition-all duration-300 z-50 animate-bounce">{warningMessage}</div>)}
-      <div className="w-full md:max-w-[400px] md:h-[800px] h-screen md:rounded-[40px] relative bg-gradient-to-br from-[#f3f6fb] to-[#eef2f6] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden md:border-[8px] md:border-white md:ring-1 md:ring-slate-200/50">
+      <div className="w-full md:max-w-[400px] md:h-[800px] h-[100dvh] md:rounded-[40px] relative bg-gradient-to-br from-[#f3f6fb] to-[#eef2f6] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden md:border-[8px] md:border-white md:ring-1 md:ring-slate-200/50">
         <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[50%] rounded-full bg-blue-200/40 blur-[80px] mix-blend-multiply pointer-events-none"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[50%] rounded-full bg-indigo-200/40 blur-[60px] mix-blend-multiply pointer-events-none"></div>
         <div className="absolute top-[40%] right-[-20%] w-[50%] h-[40%] rounded-full bg-teal-100/40 blur-[60px] mix-blend-multiply pointer-events-none"></div>
-        <div className="relative z-10 h-full p-6 overflow-hidden flex flex-col">
+        <div className="relative z-10 h-full px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-6 overflow-hidden flex flex-col">
           {view === 'list' && renderTripList()}
           {view === 'createTrip' && renderCreateTrip()}
           {view !== 'list' && view !== 'createTrip' && (
