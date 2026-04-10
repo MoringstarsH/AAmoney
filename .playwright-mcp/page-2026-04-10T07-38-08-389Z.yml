@@ -1,0 +1,28 @@
+- generic [ref=e6]:
+  - banner [ref=e7]:
+    - generic [ref=e8]:
+      - heading "My Wallet" [level=2] [ref=e9]
+      - heading "我的账单" [level=1] [ref=e10]
+    - generic [ref=e12]: 👤
+  - generic [ref=e13]:
+    - generic [ref=e17] [cursor=pointer]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: 3 成员
+        - button "删除" [ref=e20]
+      - generic [ref=e21]:
+        - heading "周末露营" [level=3] [ref=e22]
+        - generic [ref=e23]:
+          - generic [ref=e24]: 总支出
+          - generic [ref=e25]: ¥600.00
+    - generic [ref=e29] [cursor=pointer]:
+      - generic [ref=e30]:
+        - generic [ref=e31]: 3 成员
+        - button "删除" [ref=e32]
+      - generic [ref=e33]:
+        - heading "周五火锅局" [level=3] [ref=e34]
+        - generic [ref=e35]:
+          - generic [ref=e36]: 总支出
+          - generic [ref=e37]: ¥328.50
+  - button "＋ 新建账单" [ref=e39] [cursor=pointer]:
+    - generic [ref=e40]: ＋
+    - text: 新建账单

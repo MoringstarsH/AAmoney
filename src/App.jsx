@@ -182,8 +182,8 @@ function App() {
             <span className="text-slate-600 font-medium">小组人数</span>
             <div className="flex items-center gap-2">
               <button className="px-3 py-1 bg-white/70 rounded-full border border-white/60" onClick={() => setNewMemberCount(c => Math.max(1, c-1))}>-</button>
-              <input type="number" min={1} max={10} value={newMemberCount} onChange={e => { const v = Number(e.target.value); setNewMemberCount(Number.isFinite(v) ? Math.min(10, Math.max(1, v)) : 2); }} className="w-16 text-center bg-white/50 border border-white/60 rounded-xl px-2 py-2" />
-              <button className="px-3 py-1 bg-white/70 rounded-full border border-white/60" onClick={() => setNewMemberCount(c => Math.min(10, c+1))}>+</button>
+              <input type="number" min={1} max={99} value={newMemberCount} onChange={e => { const v = Number(e.target.value); setNewMemberCount(Number.isFinite(v) ? Math.min(99, Math.max(1, v)) : 2); }} className="w-16 text-center bg-white/50 border border-white/60 rounded-xl px-2 py-2" />
+              <button className="px-3 py-1 bg-white/70 rounded-full border border-white/60" onClick={() => setNewMemberCount(c => Math.min(99, c+1))}>+</button>
             </div>
           </div>
         )}
@@ -229,7 +229,7 @@ function App() {
   return (
     <div className="w-full min-h-screen bg-[#eff3f9] flex items-center justify-center font-sans text-slate-800 p-4">
       {warningMessage && (<div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-xl transition-all duration-300 z-50 animate-bounce">{warningMessage}</div>)}
-      <div className="w-full max-w-[400px] h-[800px] relative bg-gradient-to-br from-[#f3f6fb] to-[#eef2f6] rounded-[40px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden border-[8px] border-white ring-1 ring-slate-200/50">
+      <div className="w-full md:max-w-[400px] md:h-[800px] h-screen md:rounded-[40px] relative bg-gradient-to-br from-[#f3f6fb] to-[#eef2f6] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden md:border-[8px] md:border-white md:ring-1 md:ring-slate-200/50">
         <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[50%] rounded-full bg-blue-200/40 blur-[80px] mix-blend-multiply pointer-events-none"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[50%] rounded-full bg-indigo-200/40 blur-[60px] mix-blend-multiply pointer-events-none"></div>
         <div className="absolute top-[40%] right-[-20%] w-[50%] h-[40%] rounded-full bg-teal-100/40 blur-[60px] mix-blend-multiply pointer-events-none"></div>

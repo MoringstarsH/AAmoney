@@ -1,0 +1,41 @@
+- generic [ref=e42]:
+  - banner [ref=e43]:
+    - button "← 返回列表" [ref=e45] [cursor=pointer]:
+      - generic [ref=e46]: ←
+      - generic [ref=e47]: 返回列表
+    - heading "周五火锅局" [level=1] [ref=e48]
+  - generic [ref=e51]:
+    - button "查看结算" [ref=e52] [cursor=pointer]:
+      - generic [ref=e53]: 查看结算
+    - paragraph [ref=e54]: 总支出
+    - heading "¥328.50" [level=2] [ref=e55]
+    - generic [ref=e56]:
+      - generic [ref=e57]: 3 成员
+      - generic [ref=e58]: 1 笔账目
+  - generic [ref=e59]:
+    - heading "参与人" [level=3] [ref=e60]
+    - generic [ref=e61]:
+      - generic [ref=e62]:
+        - generic [ref=e63]: 老张
+        - button "✖" [ref=e64] [cursor=pointer]
+      - generic [ref=e65]:
+        - generic [ref=e66]: 老李
+        - button "✖" [ref=e67] [cursor=pointer]
+      - generic [ref=e68]:
+        - generic [ref=e69]: 老王
+        - button "✖" [ref=e70] [cursor=pointer]
+      - button "＋" [ref=e71] [cursor=pointer]:
+        - generic [ref=e72]: ＋
+  - generic [ref=e73]:
+    - heading "支出明细" [level=3] [ref=e75]
+    - generic [ref=e77]:
+      - generic [ref=e78]:
+        - generic [ref=e79]: 老
+        - generic [ref=e80]:
+          - paragraph [ref=e81]: 食材采购
+          - paragraph [ref=e82]: 老张 付款·3人平摊
+      - generic [ref=e84]: "-¥328.50"
+      - button "删除" [ref=e85] [cursor=pointer]
+  - button "＋ 记一笔" [ref=e87] [cursor=pointer]:
+    - generic [ref=e88]: ＋
+    - text: 记一笔

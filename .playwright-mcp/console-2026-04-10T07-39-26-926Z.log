@@ -1,0 +1,14 @@
+[      19ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[      68ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ https://unpkg.com/react-dom@18/umd/react-dom.development.js:29904
+[     135ms] [WARNING] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/ @ https://unpkg.com/@babel/standalone/babel.min.js:2
+[     456ms] [LOG] [TEST] group=1 weighted=2 per=50 → OK {a: 50, b: -50} @ :38
+[     457ms] [LOG] [TEST] group=2 weighted=3 per=33.33 → OK {a: 66.67, b: -66.66} @ :38
+[     457ms] [LOG] [TEST] group=3 weighted=4 per=25 → OK {a: 75, b: -75} @ :38
+[     457ms] [LOG] [TEST] group=4 weighted=5 per=20 → OK {a: 80, b: -80} @ :38
+[     457ms] [LOG] [TEST] group=5 weighted=6 per=16.67 → OK {a: 83.33, b: -83.35} @ :38
+[     457ms] [LOG] [TEST] group=6 weighted=7 per=14.29 → OK {a: 85.71000000000001, b: -85.74} @ :38
+[     457ms] [LOG] [TEST] group=7 weighted=8 per=12.5 → OK {a: 87.5, b: -87.5} @ :38
+[     457ms] [LOG] [TEST] group=8 weighted=9 per=11.11 → OK {a: 88.89, b: -88.88} @ :38
+[     457ms] [LOG] [TEST] group=9 weighted=10 per=10 → OK {a: 90, b: -90} @ :38
+[     457ms] [LOG] [TEST] group=10 weighted=11 per=9.09 → OK {a: 90.91, b: -90.9} @ :38
+[     457ms] [LOG] [TEST] settlement weighted 1..10: ALL OK @ :44
