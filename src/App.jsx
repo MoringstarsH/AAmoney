@@ -41,6 +41,7 @@ function App() {
   const [newMemberName, setNewMemberName] = useState('');
   const [isNewMemberGroup, setIsNewMemberGroup] = useState(false);
   const [newMemberCount, setNewMemberCount] = useState(2);
+  const [memberCountInput, setMemberCountInput] = useState('2');
 
   const activeTrip = useMemo(() => trips.find(t => t.id === activeTripId) || null, [trips, activeTripId]);
 
@@ -176,18 +177,18 @@ function App() {
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-4 mb-6"><button onClick={() => setView('tripHome')} className="p-2 bg-white/50 rounded-full hover:bg-white"><ChevronLeft size={24} /></button><h2 className="text-xl font-bold text-slate-800">管理参与人</h2></div>
       <Card className="mb-6"><Input label="成员名称" placeholder="例如：小李 或 陈陈CP" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} />
-        <div className="flex items-center justify-between mb-4 px-2"><span className="text-slate-600 font-medium">是否为小组/情侣?</span><button onClick={() => { const v = !isNewMemberGroup; setIsNewMemberGroup(v); if (v && (newMemberCount < 1 || newMemberCount > 10)) setNewMemberCount(2); }} className={`w-12 h-7 rounded-full p-1 transition-colors ${isNewMemberGroup ? 'bg-[#4338ca]' : 'bg-slate-300'}`}><div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isNewMemberGroup ? 'translate-x-5' : 'translate-x-0'}`} /></button></div>
+        <div className="flex items-center justify-between mb-4 px-2"><span className="text-slate-600 font-medium">是否为小组/情侣?</span><button onClick={() => { const v = !isNewMemberGroup; setIsNewMemberGroup(v); if (v && (newMemberCount < 1 || newMemberCount > 99)) { setNewMemberCount(2); setMemberCountInput('2'); } }} className={`w-12 h-7 rounded-full p-1 transition-colors ${isNewMemberGroup ? 'bg-[#4338ca]' : 'bg-slate-300'}`}><div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isNewMemberGroup ? 'translate-x-5' : 'translate-x-0'}`} /></button></div>
         {isNewMemberGroup && (
           <div className="flex items-center justify-between mb-6 px-2">
             <span className="text-slate-600 font-medium">小组人数</span>
             <div className="flex items-center gap-2">
-              <button className="px-3 py-1 bg-white/70 rounded-full border border-white/60" onClick={() => setNewMemberCount(c => Math.max(1, c-1))}>-</button>
-              <input type="number" min={1} max={99} value={newMemberCount} onChange={e => { const v = Number(e.target.value); setNewMemberCount(Number.isFinite(v) ? Math.min(99, Math.max(1, v)) : 2); }} className="w-16 text-center bg-white/50 border border-white/60 rounded-xl px-2 py-2" />
-              <button className="px-3 py-1 bg-white/70 rounded-full border border-white/60" onClick={() => setNewMemberCount(c => Math.min(99, c+1))}>+</button>
+              <button className="px-3 py-1 bg-white/70 rounded-full border border-white/60" onClick={() => { const newVal = Math.max(1, newMemberCount-1); setNewMemberCount(newVal); setMemberCountInput(String(newVal)); }}>-</button>
+              <input type="number" min={1} max={99} value={memberCountInput} onChange={e => { const val = e.target.value; if (val === '') { setMemberCountInput(''); } else { const v = Number(val); if (Number.isFinite(v)) { const limited = Math.min(99, Math.max(1, v)); setMemberCountInput(String(limited)); setNewMemberCount(limited); } } }} onBlur={() => { if (memberCountInput === '' || memberCountInput === '0') { setMemberCountInput('1'); setNewMemberCount(1); } }} className="w-16 text-center bg-white/50 border border-white/60 rounded-xl px-2 py-2" />
+              <button className="px-3 py-1 bg-white/70 rounded-full border border-white/60" onClick={() => { const newVal = Math.min(99, newMemberCount+1); setNewMemberCount(newVal); setMemberCountInput(String(newVal)); }}>+</button>
             </div>
           </div>
         )}
-        <Button onClick={() => { if (!newMemberName.trim()) return; const updatedMembers = [...activeTrip.members, { id: window.generateId(), name: newMemberName, isGroup: isNewMemberGroup, member_count: isNewMemberGroup ? newMemberCount : 1 }]; updateActiveTrip({ members: updatedMembers }); setNewMemberName(''); setIsNewMemberGroup(false); setNewMemberCount(2); }} className="w-full">添加成员</Button>
+        <Button onClick={() => { if (!newMemberName.trim()) return; const updatedMembers = [...activeTrip.members, { id: window.generateId(), name: newMemberName, isGroup: isNewMemberGroup, member_count: isNewMemberGroup ? newMemberCount : 1 }]; updateActiveTrip({ members: updatedMembers }); setNewMemberName(''); setIsNewMemberGroup(false); setNewMemberCount(2); setMemberCountInput('2'); }} className="w-full">添加成员</Button>
       </Card>
       <div className="flex-1 overflow-y-auto"><h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 pl-2">当前成员</h3>
         <div className="grid grid-cols-1 gap-3">{activeTrip.members.map(m => (

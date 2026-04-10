@@ -1,0 +1,43 @@
+- generic [ref=e42]:
+  - banner [ref=e43]:
+    - button "← 返回列表" [ref=e45] [cursor=pointer]:
+      - generic [ref=e46]: ←
+      - generic [ref=e47]: 返回列表
+    - heading "周末露营" [level=1] [ref=e48]
+  - generic [ref=e51]:
+    - button "查看结算" [ref=e52] [cursor=pointer]:
+      - generic [ref=e53]: 查看结算
+    - paragraph [ref=e54]: 总支出
+    - heading "¥600.00" [level=2] [ref=e55]
+    - generic [ref=e56]:
+      - generic [ref=e57]: 3 成员
+      - generic [ref=e58]: 1 笔账目
+  - generic [ref=e59]:
+    - heading "参与人" [level=3] [ref=e60]
+    - generic [ref=e61]:
+      - generic [ref=e62]:
+        - generic [ref=e63]: 小李
+        - button "✖" [ref=e64] [cursor=pointer]
+      - generic [ref=e65]:
+        - generic [ref=e66]: 小王
+        - button "✖" [ref=e67] [cursor=pointer]
+      - generic [ref=e68]:
+        - generic [ref=e69]: 情侣组(陈)
+        - generic [ref=e70]: 👥
+        - generic [ref=e71]: ·2人
+        - button "✖" [ref=e72] [cursor=pointer]
+      - button "＋" [ref=e73] [cursor=pointer]:
+        - generic [ref=e74]: ＋
+  - generic [ref=e75]:
+    - heading "支出明细" [level=3] [ref=e77]
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - generic [ref=e81]: 小
+        - generic [ref=e82]:
+          - paragraph [ref=e83]: 租车费
+          - paragraph [ref=e84]: 小王 付款·4人平摊
+      - generic [ref=e86]: "-¥600.00"
+      - button "删除" [ref=e87] [cursor=pointer]
+  - button "＋ 记一笔" [ref=e89] [cursor=pointer]:
+    - generic [ref=e90]: ＋
+    - text: 记一笔
