@@ -1,5 +1,5 @@
 const { useState, useMemo, useEffect } = React;
-const { Plus, Users, User, Wallet, ArrowRightLeft, Share2, ChevronLeft, Trash2, Check, CreditCard } = window;
+const { Plus, Users, User, Wallet, ArrowRightLeft, Share2, ChevronLeft, Trash2, Check, CreditCard, Camera } = window;
 
 const initialTrips = [
   {
@@ -207,23 +207,136 @@ function App() {
   ); };
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const renderSettlement = () => { const handleShare = type => { setConfirmOpen(true); }; const confirmContent = (
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [generatedTime, setGeneratedTime] = useState('');
+  
+  // 生成分享链接
+  const generateShareData = () => {
+    const time = new Date().toLocaleString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+    setGeneratedTime(time);
+    const shareData = {
+      tripName: activeTrip.name,
+      members: activeTrip.members,
+      expenses: activeTrip.expenses,
+      createdAt: time
+    };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(shareData)));
+    const url = `${window.location.origin}/share.html?data=${encoded}`;
+    setShareUrl(url);
+    return url;
+  };
+
+  // 保存到相册（截图）
+  const handleSaveImage = async () => {
+    const time = new Date().toLocaleString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+    setGeneratedTime(time);
+    
+    // 显示时间元素
+    const timeEl = document.getElementById('settlement-time');
+    if (timeEl) timeEl.style.display = 'block';
+    
+    // 等待渲染
+    await new Promise(r => setTimeout(r, 100));
+    
+    const element = document.getElementById('settlement-screenshot');
+    if (!element) return;
+    
+    try {
+      // 使用 canvas 截图
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      });
+      
+      // 下载图片
+      const link = document.createElement('a');
+      link.download = `${activeTrip.name}_结算方案_${time.replace(/[\/:\s]/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+      showWarning('图片已保存');
+    } catch (err) {
+      console.error('截图失败:', err);
+      showWarning('保存失败，请重试');
+    } finally {
+      if (timeEl) setTimeout(() => timeEl.style.display = 'none', 500);
+    }
+  };
+
+  // 分享给朋友
+  const handleShare = () => {
+    const url = generateShareData();
+    setShareModalOpen(true);
+  };
+
+  // 复制链接
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      showWarning('链接已复制');
+    }).catch(() => {
+      // 降级方案
+      const input = document.createElement('input');
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      showWarning('链接已复制');
+    });
+  };
+
+  const renderSettlement = () => { const confirmContent = (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-[85%] shadow-xl">
+      <div className="bg-white rounded-2xl p-6 w-[85%] shadow-xl max-w-sm">
         <h3 className="text-lg font-bold text-slate-800 mb-2">结算确认</h3>
         <p className="text-sm text-slate-600 mb-3">分账方式：按加权人数均分（单人=1，小组=member_count）。单人应付 = 总金额 / 加权人数。</p>
         <div className="flex gap-2 justify-end">
           <button className="px-4 py-2 rounded-full bg-slate-200 text-slate-700" onClick={()=>setConfirmOpen(false)}>取消</button>
-          <button className="px-4 py-2 rounded-full bg-indigo-600 text-white" onClick={()=>{ setConfirmOpen(false); showWarning('已确认结算方案（模拟）'); }}>确认</button>
+          <button className="px-4 py-2 rounded-full bg-indigo-600 text-white" onClick={()=>{ setConfirmOpen(false); showWarning('已确认结算方案'); }}>确认</button>
         </div>
       </div>
     </div>
-  ); return (
+  );
+
+  const shareModalContent = (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+        <h3 className="text-lg font-bold text-slate-800 mb-4">分享给朋友</h3>
+        <p className="text-sm text-slate-600 mb-3">复制下方链接发送给朋友，他们可以通过链接查看此结算方案。</p>
+        <div className="bg-slate-100 rounded-xl p-3 mb-4 break-all text-xs text-slate-600 max-h-24 overflow-y-auto">
+          {shareUrl}
+        </div>
+        <div className="flex gap-2">
+          <button className="flex-1 px-4 py-2 rounded-full bg-slate-200 text-slate-700" onClick={()=>setShareModalOpen(false)}>关闭</button>
+          <button className="flex-1 px-4 py-2 rounded-full bg-indigo-600 text-white" onClick={copyShareLink}>复制链接</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
     <div className="flex flex-col h-full">
       <div className="flex items中心 gap-4 mb-6"><button onClick={() => setView('tripHome')} className="p-2 bg-white/50 rounded-full hover:bg白色"><ChevronLeft size={24} /></button><h2 className="text-xl font-bold text-slate-800">结算方案</h2></div>
-        <div className="flex-1 overflow-y-auto pb-20"><div id="settlement-screenshot" className="bg-gradient-to-b from-white/80 to-white/40 backdrop-blur-xl border border-white rounded-[32px] p-6 shadow-2xl text-center mb-6"><div className="mb-6"><p className="text-slate-400 text-xs font-bold tracking-widest uppercase mb-2">Trip Balance</p><h2 className="text-2xl font-bold text-slate-800">{activeTrip.name} 账单</h2><p className="text-slate-500 text-sm mt-1">总支出 {formatMoney(totalSpent)}</p><p className="text-[12px] text-slate-500 mt-2">付款规则，单人应付=总金额/收益人数</p></div><div className="space-y-4 mb-8 text-left">{settlements.length === 0 ? (<div className="p-4 bg-green-50 rounded-2xl text-green-600 text-center font-bold">🎉 账目已清，无需转账！</div>) : (settlements.map((s, idx) => { const fromUser = activeTrip.members.find(m => m.id === s.from); const toUser = activeTrip.members.find(m => m.id === s.to); return (<div key={idx} className="relative p-4 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify之间"><div className="flex items-center gap-3 z-10"><div className="flex flex-col items-center"><span className="font-bold text-slate-700">{(fromUser && fromUser.name) || ''}</span><span className="text-[10px] text-slate-400">付款方</span></div><div className="flex flex-col items-center px-2"><span className="text-xs text-slate-300">------------&gt;</span></div><div className="flex flex-col items-center"><span className="font-bold text-slate-700">{(toUser && toUser.name) || ''}</span><span className="text-[10px] text-slate-400">收款方</span></div></div><div className="z-10 font-extrabold text-lg text-[#4338ca]">{formatMoney(s.amount)}</div></div>); }))}</div><div className="border-t border-slate-200 pt-4 grid grid-cols-2 gap-4 text-left">{activeTrip.members.map(m => { const bal = balances[m.id]; const isPos = bal > 0; if (Math.abs(bal) < 0.01) return null; return (<div key={m.id} className="flex justify之间 items-center text-xs"><span className="text-slate-500 font-medium">{m.name}</span><span className={`font-bold ${isPos ? 'text-teal-500' : 'text-rose-500'}`}>{isPos ? '+' : ''}{formatMoney(bal)}</span></div>); })}</div><div className="mt-8 text-[10px] text-slate-300 font-mono">Generated by LumiSplit</div></div></div>
-      <div className="absolute bottom-6 left-0 right-0 flex gap-3 justify-center px-4"><Button variant="secondary" className="flex-1 bg-white" onClick={() => handleShare('save')}>保存相册</Button><Button variant="primary" className="flex-1" icon={Share2} onClick={() => handleShare('share')}>分享给朋友</Button></div>
+        <div className="flex-1 overflow-y-auto pb-20"><div id="settlement-screenshot" className="bg-gradient-to-b from-white/80 to-white/40 backdrop-blur-xl border border-white rounded-[32px] p-6 shadow-2xl text-center mb-6"><div className="mb-6"><p className="text-slate-400 text-xs font-bold tracking-widest uppercase mb-2">Trip Balance</p><h2 className="text-2xl font-bold text-slate-800">{activeTrip.name} 账单</h2><p className="text-slate-500 text-sm mt-1">总支出 {formatMoney(totalSpent)}</p><p className="text-[12px] text-slate-500 mt-2">付款规则，单人应付=总金额/收益人数</p><p id="settlement-time" className="text-[10px] text-slate-400 mt-1" style={{display: 'none'}}>生成时间: {generatedTime}</p></div><div className="space-y-4 mb-8 text-left">{settlements.length === 0 ? (<div className="p-4 bg-green-50 rounded-2xl text-green-600 text-center font-bold">🎉 账目已清，无需转账！</div>) : (settlements.map((s, idx) => { const fromUser = activeTrip.members.find(m => m.id === s.from); const toUser = activeTrip.members.find(m => m.id === s.to); return (<div key={idx} className="relative p-4 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify之间"><div className="flex items-center gap-3 z-10"><div className="flex flex-col items-center"><span className="font-bold text-slate-700">{(fromUser && fromUser.name) || ''}</span><span className="text-[10px] text-slate-400">付款方</span></div><div className="flex flex-col items-center px-2"><span className="text-xs text-slate-300">------------&gt;</span></div><div className="flex flex-col items-center"><span className="font-bold text-slate-700">{(toUser && toUser.name) || ''}</span><span className="text-[10px] text-slate-400">收款方</span></div></div><div className="z-10 font-extrabold text-lg text-[#4338ca]">{formatMoney(s.amount)}</div></div>); }))}</div><div className="border-t border-slate-200 pt-4 grid grid-cols-2 gap-4 text-left">{activeTrip.members.map(m => { const bal = balances[m.id]; const isPos = bal > 0; if (Math.abs(bal) < 0.01) return null; return (<div key={m.id} className="flex justify之间 items-center text-xs"><span className="text-slate-500 font-medium">{m.name}</span><span className={`font-bold ${isPos ? 'text-teal-500' : 'text-rose-500'}`}>{isPos ? '+' : ''}{formatMoney(bal)}</span></div>); })}</div><div className="mt-8 text-[10px] text-slate-300 font-mono">Generated by LumiSplit</div></div></div>
+      <div className="absolute bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-0 right-0 flex gap-3 justify-center px-4">
+        <Button className="flex-1 bg-white text-slate-700 hover:bg-slate-50" onClick={handleSaveImage}>
+          <Camera size={18} className="inline mr-1" />保存相册
+        </Button>
+        <Button className="flex-1" onClick={handleShare}>
+          <Share2 size={18} className="inline mr-1" />分享给朋友
+        </Button>
+      </div>
       {confirmOpen && confirmContent}
+      {shareModalOpen && shareModalContent}
     </div>
   ); };
 

@@ -9,4 +9,5 @@ const ChevronLeft = ({ size = 20 }) => <I size={size}>←</I>;
 const Trash2 = ({ size = 12 }) => <I size={size}>✖</I>;
 const Check = ({ size = 14 }) => <I size={size}>✓</I>;
 const CreditCard = ({ size = 24 }) => <I size={size}>💳</I>;
-window.I = I; window.Plus = Plus; window.Users = Users; window.User = User; window.Wallet = Wallet; window.ArrowRightLeft = ArrowRightLeft; window.Share2 = Share2; window.ChevronLeft = ChevronLeft; window.Trash2 = Trash2; window.Check = Check; window.CreditCard = CreditCard;
+const Camera = ({ size = 20 }) => <I size={size}>📷</I>;
+window.I = I; window.Plus = Plus; window.Users = Users; window.User = User; window.Wallet = Wallet; window.ArrowRightLeft = ArrowRightLeft; window.Share2 = Share2; window.ChevronLeft = ChevronLeft; window.Trash2 = Trash2; window.Check = Check; window.CreditCard = CreditCard; window.Camera = Camera;
