@@ -1,0 +1,12 @@
+const I = ({ children, size = 20 }) => <span style={{ fontSize: size }} className="leading-none">{children}</span>;
+const Plus = ({ size = 20 }) => <I size={size}>＋</I>;
+const Users = ({ size = 20 }) => <I size={size}>👥</I>;
+const User = ({ size = 20 }) => <I size={size}>👤</I>;
+const Wallet = ({ size = 40 }) => <I size={size}>👛</I>;
+const ArrowRightLeft = ({ size = 20 }) => <I size={size}>↔️</I>;
+const Share2 = ({ size = 20 }) => <I size={size}>🔗</I>;
+const ChevronLeft = ({ size = 20 }) => <I size={size}>←</I>;
+const Trash2 = ({ size = 12 }) => <I size={size}>✖</I>;
+const Check = ({ size = 14 }) => <I size={size}>✓</I>;
+const CreditCard = ({ size = 24 }) => <I size={size}>💳</I>;
+window.I = I; window.Plus = Plus; window.Users = Users; window.User = User; window.Wallet = Wallet; window.ArrowRightLeft = ArrowRightLeft; window.Share2 = Share2; window.ChevronLeft = ChevronLeft; window.Trash2 = Trash2; window.Check = Check; window.CreditCard = CreditCard;
