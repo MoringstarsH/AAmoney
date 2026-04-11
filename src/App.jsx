@@ -388,6 +388,25 @@ function App() {
               <p className="text-slate-500 text-sm mb-1">总支出</p>
               <p className="text-4xl font-extrabold text-indigo-600">{formatMoney(totalSpent)}</p>
               <p className="text-xs text-slate-400 mt-1">共 {activeTrip.expenses.length} 笔支出</p>
+              
+              {/* 成员支出统计 */}
+              <div className="mt-4 pt-4 border-t border-indigo-100">
+                <p className="text-xs text-slate-500 mb-2">成员支出</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {activeTrip.members.map(m => {
+                    const memberTotal = activeTrip.expenses
+                      .filter(exp => exp.payerId === m.id)
+                      .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+                    if (memberTotal <= 0) return null;
+                    return (
+                      <div key={m.id} className="bg-white/70 rounded-lg px-3 py-1.5 text-xs">
+                        <span className="text-slate-600">{m.name}</span>
+                        <span className="font-bold text-indigo-600 ml-1">{formatMoney(memberTotal)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             
             <p className="text-[12px] text-slate-500">付款规则：单人应付 = 总金额 / 受益人数</p>
