@@ -80,6 +80,20 @@ function ShareApp() {
     return data.expenses.reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
   }, [data]);
 
+  // 辅助函数：获取分摊人数描述
+  const getSplitDesc = (beneficiaryIds) => {
+    const weightedCount = beneficiaryIds.reduce((sum, id) => {
+      const member = data.members.find(m => m.id === id);
+      const count = member?.member_count || (member?.isGroup ? 2 : 1);
+      return sum + count;
+    }, 0);
+    const personCount = beneficiaryIds.length;
+    if (weightedCount === personCount) {
+      return `${personCount}人分摊`;
+    }
+    return `${personCount}组(共${weightedCount}人)分摊`;
+  };
+
   if (error) {
     return (
       <div className="w-full min-h-screen bg-[#eff3f9] flex items-center justify-center p-4">
@@ -108,41 +122,57 @@ function ShareApp() {
       <div className="max-w-md mx-auto">
         {/* 分享卡片 */}
         <div className="bg-gradient-to-b from-white/80 to-white/40 backdrop-blur-xl border border-white rounded-[32px] p-6 shadow-2xl mb-6">
-          {/* 头部 */}
+          
+          {/* 头部：账单名称 + 总支出 */}
           <div className="mb-6 text-center">
             <p className="text-slate-400 text-xs font-bold tracking-widest uppercase mb-2">Trip Balance</p>
-            <h2 className="text-2xl font-bold text-slate-800">{data.tripName} 账单</h2>
-            <p className="text-slate-500 text-sm mt-1">总支出 {formatMoney(totalSpent)}</p>
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">{data.tripName}</h2>
+            
+            {/* 总支出 - 大字体突出显示 */}
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 mb-3">
+              <p className="text-slate-500 text-sm mb-1">总支出</p>
+              <p className="text-4xl font-extrabold text-indigo-600">{formatMoney(totalSpent)}</p>
+              <p className="text-xs text-slate-400 mt-1">共 {data.expenses.length} 笔支出</p>
+            </div>
+            
+            <p className="text-[12px] text-slate-500">付款规则：单人应付 = 总金额 / 受益人数</p>
             <p className="text-[10px] text-slate-400 mt-2">生成时间: {data.createdAt}</p>
           </div>
 
           {/* 结算方案 */}
-          <div className="space-y-4 mb-8 text-left">
-            {settlements.length === 0 ? (
-              <div className="p-4 bg-green-50 rounded-2xl text-green-600 text-center font-bold">
-                🎉 账目已清，无需转账！
-              </div>
-            ) : (
-              settlements.map((s, idx) => {
-                const fromUser = data.members.find(m => m.id === s.from);
-                const toUser = data.members.find(m => m.id === s.to);
-                return (
-                  <div key={idx} className="relative p-4 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-700">{fromUser?.name || ''}</span>
-                      <span className="text-slate-300 text-xs">→</span>
-                      <span className="font-bold text-slate-700">{toUser?.name || ''}</span>
+          <div className="text-left mb-6">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+              <span>💸</span> 结算方案
+            </h3>
+            <div className="space-y-3">
+              {settlements.length === 0 ? (
+                <div className="p-4 bg-green-50 rounded-2xl text-green-600 text-center font-bold">
+                  🎉 账目已清，无需转账！
+                </div>
+              ) : (
+                settlements.map((s, idx) => {
+                  const fromUser = data.members.find(m => m.id === s.from);
+                  const toUser = data.members.find(m => m.id === s.to);
+                  return (
+                    <div key={idx} className="relative p-4 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-700">{fromUser?.name || ''}</span>
+                        <span className="text-slate-400 text-xs">→</span>
+                        <span className="font-bold text-slate-700">{toUser?.name || ''}</span>
+                      </div>
+                      <span className="font-extrabold text-lg text-[#4338ca]">{formatMoney(s.amount)}</span>
                     </div>
-                    <span className="font-extrabold text-lg text-[#4338ca]">{formatMoney(s.amount)}</span>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
 
           {/* 成员余额 */}
-          <div className="border-t border-slate-200 pt-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">成员余额</h3>
+          <div className="border-t border-slate-200 pt-4 text-left mb-6">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+              <span>👥</span> 成员余额
+            </h3>
             <div className="grid grid-cols-2 gap-3">
               {data.members.map(m => {
                 const bal = balances[m.id] || 0;
@@ -154,6 +184,30 @@ function ShareApp() {
                     <span className={`font-bold ${isPos ? 'text-green-500' : 'text-red-500'}`}>
                       {isPos ? '+' : ''}{formatMoney(bal)}
                     </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 支出明细 - 全部显示 */}
+          <div className="border-t border-slate-200 pt-4 text-left">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+              <span>📋</span> 支出明细
+            </h3>
+            <div className="space-y-2">
+              {data.expenses.map((exp, idx) => {
+                const payer = data.members.find(m => m.id === exp.payerId);
+                return (
+                  <div key={exp.id} className="bg-white/60 rounded-xl p-3 text-sm">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-medium text-slate-700">{exp.description || '未命名支出'}</span>
+                      <span className="font-bold text-slate-800">{formatMoney(exp.amount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-slate-500">
+                      <span>💳 {payer?.name || '未知'} 支付</span>
+                      <span>{getSplitDesc(exp.beneficiaryIds)}</span>
+                    </div>
                   </div>
                 );
               })}
