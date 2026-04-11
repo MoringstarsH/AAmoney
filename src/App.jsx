@@ -56,6 +56,34 @@ function App() {
     setTrips(prev => prev.map(t => (t.id === activeTripId ? { ...t, ...updates } : t)));
   };
 
+  // 删除成员并清理相关支出中的引用
+  const removeMemberFromTrip = (memberId) => {
+    if (activeTrip.members.length <= 1) {
+      showWarning('至少需要保留一位参与人。');
+      return;
+    }
+    
+    // 从成员列表中移除
+    const updatedMembers = activeTrip.members.filter(m => m.id !== memberId);
+    
+    // 从所有支出的受益人列表中移除该成员
+    const updatedExpenses = activeTrip.expenses.map(exp => {
+      // 如果付款人被删除，需要重新指定付款人（默认为第一个成员）
+      let newPayerId = exp.payerId;
+      if (exp.payerId === memberId) {
+        newPayerId = updatedMembers[0]?.id || '';
+      }
+      
+      return {
+        ...exp,
+        payerId: newPayerId,
+        beneficiaryIds: exp.beneficiaryIds.filter(id => id !== memberId)
+      };
+    }).filter(exp => exp.beneficiaryIds.length > 0); // 如果支出没有受益人了，删除该支出
+    
+    updateActiveTrip({ members: updatedMembers, expenses: updatedExpenses });
+  };
+
   const formatMoney = window.formatMoney;
 
   const showWarning = message => {
@@ -149,7 +177,7 @@ function App() {
               <span className="mr-1">{m.name}</span>
               {m.isGroup && <Users size={14} />}
               {m.isGroup && <span className="ml-1 text-[10px] text-indigo-500">·{m.member_count || 2}人</span>}
-              <button onClick={() => { if (activeTrip.members.length > 1) { const updated = activeTrip.members.filter(x => x.id !== m.id); updateActiveTrip({ members: updated }); } else { showWarning('至少需要保留一位参与人。'); } }} className="text-slate-300 hover:text-slate-500 p-0.5 rounded-full transition-colors active:scale-90" title="移除成员"><Trash2 size={12} /></button>
+              <button onClick={() => removeMemberFromTrip(m.id)} className="text-slate-300 hover:text-slate-500 p-0.5 rounded-full transition-colors active:scale-90" title="移除成员"><Trash2 size={12} /></button>
             </div>))}
           <button onClick={() => setView('addMember')} className="flex items-center justify-center w-8 h-8 bg-white/50 border border-white/60 text-slate-400 rounded-full hover:bg-white transition-colors shadow-md shadow-slate-100/50 active:scale-90" title="添加成员"><Plus size={16} /></button>
         </div>
@@ -192,7 +220,7 @@ function App() {
       </Card>
       <div className="flex-1 overflow-y-auto"><h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 pl-2">当前成员</h3>
         <div className="grid grid-cols-1 gap-3">{activeTrip.members.map(m => (
-          <div key={m.id} className="flex items-center justify-between p-4 bg-white/30 rounded-2xl border border-white/40"><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${m.isGroup ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{m.isGroup ? <Users size={16} /> : m.name[0]}</div><span className="font-bold text-slate-700">{m.name}</span>{m.isGroup && <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">小组</span>}</div><button onClick={() => { if (activeTrip.members.length > 1) { const updated = activeTrip.members.filter(x => x.id !== m.id); updateActiveTrip({ members: updated }); } else { showWarning('至少需要保留一位参与人。'); } }} className="text-slate-400 hover:text-red-400 p-2"><Trash2 size={18} /></button></div>))}</div>
+          <div key={m.id} className="flex items-center justify-between p-4 bg-white/30 rounded-2xl border border-white/40"><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${m.isGroup ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{m.isGroup ? <Users size={16} /> : m.name[0]}</div><span className="font-bold text-slate-700">{m.name}</span>{m.isGroup && <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">小组</span>}</div><button onClick={() => removeMemberFromTrip(m.id)} className="text-slate-400 hover:text-red-400 p-2"><Trash2 size={18} /></button></div>))}</div>
       </div>
     </div>
   );
