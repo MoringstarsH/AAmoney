@@ -1,6 +1,6 @@
 ---
 name: aamoney-dev
-description: AA账单应用开发指南，包含纯前端架构、响应式适配、截图分享等最佳实践
+description: AA账单应用开发指南，包含纯前端架构、响应式适配、截图分享、数据压缩等最佳实践
 ---
 
 # AAmoney 开发指南
@@ -141,9 +141,11 @@ async function captureScreenshot(element) {
 ```
 
 **截图内容包含**:
-- 账单名称和总支出
+- 账单名称和总支出（大字体突出显示）
+- 成员支出统计（每人支付的总额）
 - 结算方案（谁付给谁）
 - 成员余额明细
+- 完整支出明细列表
 - 生成时间戳
 
 #### 链接分享
@@ -169,7 +171,94 @@ function generateShareLink(tripData) {
 - 无返回按钮，保持简洁
 - 独立的 `share.html` 和 `share.jsx`
 
-### 5. 数据持久化
+### 5. 数据压缩优化（短链接）
+
+为减少分享链接长度，使用短字段名映射和 ID 索引化：
+
+```javascript
+// 压缩数据：使用短字段名，ID 转为索引
+const idMap = {};
+activeTrip.members.forEach((m, idx) => { idMap[m.id] = idx; });
+
+const compressedData = {
+  n: activeTrip.name,                    // tripName
+  c: time,                               // createdAt
+  m: activeTrip.members.map(m => ({      // members
+    n: m.name,                           // name
+    g: m.isGroup ? 1 : 0,                // isGroup (0/1)
+    c: m.member_count || (m.isGroup ? 2 : 1)
+  })),
+  e: activeTrip.expenses.map(exp => ({    // expenses
+    d: exp.description,                  // description
+    a: exp.amount,                       // amount
+    p: idMap[exp.payerId],               // payerId (索引)
+    b: exp.beneficiaryIds.map(id => idMap[id])  // beneficiaryIds (索引)
+  }))
+};
+
+const encoded = btoa(encodeURIComponent(JSON.stringify(compressedData)));
+```
+
+**压缩效果**:
+- 原始链接：~1500+ 字符
+- 压缩后：~674 字符
+- 减少约 **55%**
+
+**字段映射表**:
+| 原字段 | 压缩后 | 说明 |
+|--------|--------|------|
+| tripName | n | 账单名称 |
+| members | m | 成员列表 |
+| expenses | e | 支出列表 |
+| description | d | 支出描述 |
+| amount | a | 金额 |
+| payerId | p | 付款人ID（索引） |
+| beneficiaryIds | b | 受益人IDs（索引） |
+| isGroup | g | 是否小组（0/1） |
+| member_count | c | 小组人数 |
+| createdAt | c | 创建时间 |
+
+### 6. 数据一致性维护
+
+#### 删除成员时的级联清理
+删除成员时，需要同步清理所有相关数据，避免残留引用导致计算错误：
+
+```javascript
+const removeMemberFromTrip = (memberId) => {
+  if (activeTrip.members.length <= 1) {
+    showWarning('至少需要保留一位参与人。');
+    return;
+  }
+  
+  // 从成员列表中移除
+  const updatedMembers = activeTrip.members.filter(m => m.id !== memberId);
+  
+  // 从所有支出的受益人列表中移除该成员
+  const updatedExpenses = activeTrip.expenses.map(exp => {
+    // 如果付款人被删除，重新指定付款人（默认为第一个成员）
+    let newPayerId = exp.payerId;
+    if (exp.payerId === memberId) {
+      newPayerId = updatedMembers[0]?.id || '';
+    }
+    
+    return {
+      ...exp,
+      payerId: newPayerId,
+      beneficiaryIds: exp.beneficiaryIds.filter(id => id !== memberId)
+    };
+  }).filter(exp => exp.beneficiaryIds.length > 0); // 删除无受益人的支出
+  
+  updateActiveTrip({ members: updatedMembers, expenses: updatedExpenses });
+};
+```
+
+**关键处理点**:
+1. 从 `members` 数组中删除成员
+2. 从 `expenses[*].beneficiaryIds` 中移除该成员ID
+3. 如果该成员是付款人，重新指定付款人
+4. 如果支出没有受益人了，删除该支出
+
+### 7. 数据持久化
 
 #### LocalStorage 封装
 ```javascript
@@ -189,7 +278,7 @@ export const saveTrips = (trips) => {
 };
 ```
 
-### 6. 交互优化
+### 8. 交互优化
 
 #### 数字输入优化
 小组人数输入框支持清空后重新输入：
@@ -246,6 +335,14 @@ const Share2 = ({ size = 20 }) => <span style={{ fontSize: size }}>🔗</span>;
 - 使用浏览器开发者工具 Network 面板检查 CDN 加载
 - LocalStorage 数据在 Application 面板查看
 - 使用 `?t=timestamp` 参数强制刷新
+
+## 更新日志
+
+### 2025-04-12
+- ✨ 添加成员支出统计（总支出下方显示每人支付总额）
+- 🔗 优化分享链接长度（使用短字段名压缩，减少 55%）
+- 🐛 修复删除成员时的数据一致性问题
+- 🎨 优化结算分享页面布局（总支出突出显示、添加完整支出明细）
 
 ## 参考
 
