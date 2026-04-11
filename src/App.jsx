@@ -239,20 +239,38 @@ function App() {
   const [shareUrl, setShareUrl] = useState('');
   const [generatedTime, setGeneratedTime] = useState('');
   
-  // 生成分享链接
+  // 生成分享链接（使用短字段名压缩数据）
   const generateShareData = () => {
     const time = new Date().toLocaleString('zh-CN', {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit'
     });
     setGeneratedTime(time);
-    const shareData = {
-      tripName: activeTrip.name,
-      members: activeTrip.members,
-      expenses: activeTrip.expenses,
-      createdAt: time
+    
+    // 压缩数据：使用短字段名，移除不必要的字段
+    // 构建 ID 映射表（将长 ID 映射为短索引）
+    const idMap = {};
+    activeTrip.members.forEach((m, idx) => {
+      idMap[m.id] = idx;  // m1 -> 0, m2 -> 1, ...
+    });
+    
+    const compressedData = {
+      n: activeTrip.name,                                    // tripName
+      c: time,                                               // createdAt
+      m: activeTrip.members.map(m => ({                      // members
+        n: m.name,                                           // name
+        g: m.isGroup ? 1 : 0,                                // isGroup (0/1)
+        c: m.member_count || (m.isGroup ? 2 : 1)             // member_count
+      })),
+      e: activeTrip.expenses.map(exp => ({                    // expenses
+        d: exp.description,                                  // description
+        a: exp.amount,                                       // amount
+        p: idMap[exp.payerId],                               // payerId (映射为索引)
+        b: exp.beneficiaryIds.map(id => idMap[id])           // beneficiaryIds (映射为索引)
+      }))
     };
-    const encoded = btoa(encodeURIComponent(JSON.stringify(shareData)));
+    
+    const encoded = btoa(encodeURIComponent(JSON.stringify(compressedData)));
     const url = `${window.location.origin}/share.html?data=${encoded}`;
     setShareUrl(url);
     return url;

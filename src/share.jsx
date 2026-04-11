@@ -64,7 +64,29 @@ function ShareApp() {
         return;
       }
       const decoded = JSON.parse(decodeURIComponent(atob(dataParam)));
-      setData(decoded);
+      
+      // 解压数据：将短字段名还原为完整格式
+      const members = (decoded.m || []).map((m, idx) => ({
+        id: 'm' + idx,
+        name: m.n,
+        isGroup: m.g === 1,
+        member_count: m.c
+      }));
+      
+      const decompressedData = {
+        tripName: decoded.n,
+        createdAt: decoded.c,
+        members: members,
+        expenses: (decoded.e || []).map((exp, idx) => ({
+          id: 'e' + idx,
+          description: exp.d,
+          amount: exp.a,
+          payerId: 'm' + exp.p,                              // 索引转为 ID
+          beneficiaryIds: (exp.b || []).map(bid => 'm' + bid) // 索引转为 ID
+        }))
+      };
+      
+      setData(decompressedData);
     } catch (e) {
       setError('链接已损坏或过期');
     }
