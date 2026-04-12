@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分账演示动画 - LumiSplit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: #f5f7fa;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .demo-container {
+      width: 100%;
+      max-width: 400px;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    
+    /* 场景区域 */
+    .scene {
+      position: relative;
+      height: 280px;
+      background: linear-gradient(180deg, #E3F2FD 0%, #BBDEFB 100%);
+      overflow: hidden;
+    }
+    
+    .scene.settlement {
+      background: linear-gradient(180deg, #F3E5F5 0%, #E1BEE7 100%);
+    }
+    
+    /* 地面 */
+    .ground {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 60px;
+      background: #90A4AE;
+    }
+    
+    /* 地点标记 */
+    .location-marker {
+      position: absolute;
+      bottom: 60px;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+    
+    .location-icon {
+      width: 50px;
+      height: 50px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      margin: 0 auto 8px;
+    }
+    
+    .location-name {
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    /* 卡通小人 - 圆头圆身 */
+    .character {
+      position: absolute;
+      width: 50px;
+      height: 70px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+    }
+    
+    .char-body {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    /* 头 */
+    .char-head {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #FFD93D;
+      border: 2px solid rgba(0,0,0,0.1);
+    }
+    
+    /* 脸 */
+    .char-face {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px;
+    }
+    
+    /* 身体 */
+    .char-torso {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      position: absolute;
+      top: 26px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
+    /* 名字 */
+    .char-name {
+      position: absolute;
+      top: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: #37474F;
+      background: rgba(255,255,255,0.95);
+      padding: 3px 10px;
+      border-radius: 10px;
+      white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* 走路动画 */
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    
+    .character.walking {
+      animation: bounce 0.3s infinite;
+    }
+    
+    /* 跳跃 */
+    @keyframes jump {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-25px) scale(1.05); }
+    }
+    
+    .character.jumping {
+      animation: jump 0.5s ease;
+    }
+    
+    /* 选中效果 */
+    .character.active .char-head {
+      box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.5);
+    }
+    
+    /* 金币 */
+    .coin {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(145deg, #FFD700, #FFA000);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+      z-index: 20;
+      border: 2px solid #FF8F00;
+    }
+    
+    @keyframes coinFly {
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(360deg); opacity: 0; }
+    }
+    
+    .coin.flying {
+      animation: coinFly 0.8s ease-out forwards;
+    }
+    
+    /* 金额飘字 */
+    .float-text {
+      position: absolute;
+      font-size: 18px;
+      font-weight: 800;
+      z-index: 25;
+      animation: floatUp 1.2s ease-out forwards;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .float-text.negative {
+      color: #EF5350;
+    }
+    
+    .float-text.positive {
+      color: #66BB6A;
+    }
+    
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-60px) scale(1.1); opacity: 0; }
+    }
+    
+    /* 底部信息面板 */
+    .info-panel {
+      padding: 16px;
+      background: white;
+    }
+    
+    .step-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #E0E0E0;
+      transition: all 0.3s;
+    }
+    
+    .dot.active {
+      background: #2196F3;
+      width: 20px;
+      border-radius: 3px;
+    }
+    
+    .instruction {
+      text-align: center;
+      font-size: 14px;
+      color: #546E7A;
+      font-weight: 500;
+      margin-bottom: 12px;
+      min-height: 20px;
+    }
+    
+    /* 支出明细卡片 */
+    .expense-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.4s ease;
+    }
+    
+    .expense-card.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    
+    .expense-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    
+    .expense-card-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .expense-card-amount {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    
+    .expense-card-detail {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+    
+    /* 结算列表 */
+    .settlement-list {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .settlement-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #f5f7fa;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      opacity: 0;
+      transform: scale(0.9);
+      transition: all 0.3s ease;
+    }
+    
+    .settlement-item.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+    
+    .settlement-arrow {
+      color: #9E9E9E;
+      font-size: 20px;
+    }
+    
+    .settlement-amount {
+      font-weight: 700;
+      color: #667eea;
+      font-size: 16px;
+    }
+    
+    /* 角色颜色 */
+    .char-color-1 { background: #FF6B6B; }
+    .char-color-2 { background: #4ECDC4; }
+    .char-color-3 { background: #45B7D1; }
+    .char-color-4 { background: #96CEB4; }
+    .char-color-5 { background: #FFEAA7; }
+    .char-color-6 { background: #DDA0DD; }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <!-- 场景区域 -->
+    <div class="scene" id="scene">
+      <div class="ground"></div>
+      <div id="locationsLayer"></div>
+      <div id="charactersLayer"></div>
+      <div id="effectsLayer"></div>
+    </div>
+    
+    <!-- 信息面板 -->
+    <div class="info-panel">
+      <!-- 步骤指示器 -->
+      <div class="step-dots" id="stepDots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      
+      <!-- 说明文字 -->
+      <div class="instruction" id="instruction">准备开始...</div>
+      
+      <!-- 支出明细区域 -->
+      <div id="expenseList"></div>
+      
+      <!-- 结算列表区域 -->
+      <div class="settlement-list" id="settlementList" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    // 示例数据
+    const demoData = {
+      tripName: '周末露营',
+      members: [
+        { id: 'm1', name: '小李' },
+        { id: 'm2', name: '小王' },
+        { id: 'm3', name: '小陈' }
+      ],
+      expenses: [
+        { id: 'e1', description: '租车费', amount: 300, payerId: 'm1', beneficiaryIds: ['m1', 'm2', 'm3'] },
+        { id: 'e2', description: '食材采购', amount: 150, payerId: 'm2', beneficiaryIds: ['m1', 'm2', 'm3'] }
+      ]
+    };
+    
+    // 根据支出描述自动匹配 emoji
+    const iconMap = {
+      '车': '🚗', '租': '🚗', '油': '⛽', '交通': '🚌',
+      '食': '🍽️', '餐': '🍽️', '饭': '🍚', '火锅': '🍲', '烧烤': '🍖', '食材': '🛒', '超市': '🛒', '买': '🛍️',
+      '住': '🏨', '房': '🏨', '酒店': '🏨', '民宿': '🏠',
+      '票': '🎫', '门': '🎫', '景点': '🏞️', '玩': '🎮',
+      '酒': '🍺', '水': '💧', '饮': '🥤',
+      '其他': '📦'
+    };
+    
+    // 给每个成员分配 emoji
+    const memberEmojis = ['😊', '😎', '🤗', '🥳', '😄', '🤔'];
+    demoData.members.forEach((m, i) => {
+      m.emoji = memberEmojis[i % memberEmojis.length];
+    });
+    
+    // 给每个支出匹配 emoji
+    demoData.expenses.forEach(exp => {
+      exp.icon = '📦'; // 默认
+      for (let key in iconMap) {
+        if (exp.description.includes(key)) {
+          exp.icon = iconMap[key];
+          break;
+        }
+      }
+    });
+
+    class SplitAnimation {
+      constructor(data) {
+        this.data = data;
+        this.characters = {};
+        this.balances = {};
+        this.currentStep = 0;
+        this.sceneWidth = 400;
+        
+        this.init();
+      }
+      
+      init() {
+        // 初始化余额
+        this.data.members.forEach(m => {
+          this.balances[m.id] = 0;
+        });
+        
+        // 创建小人
+        this.createCharacters();
+        
+        // 开始动画
+        this.startAnimation();
+      }
+      
+      createCharacters() {
+        const container = document.getElementById('charactersLayer');
+        const startX = 60;
+        const gap = 100;
+        const groundY = 210;
+        
+        this.data.members.forEach((member, index) => {
+          const charDiv = document.createElement('div');
+          charDiv.className = 'character';
+          charDiv.id = `char-${member.id}`;
+          charDiv.innerHTML = `
+            <div class="char-body">
+              <div class="char-head">
+                <div class="char-face">${member.emoji}</div>
+              </div>
+              <div class="char-torso char-color-${index + 1}"></div>
+              <div class="char-name">${member.name}</div>
+            </div>
+          `;
+          
+          const x = startX + index * gap;
+          charDiv.style.left = `${x}px`;
+          charDiv.style.top = `${groundY}px`;
+          
+          container.appendChild(charDiv);
+          this.characters[member.id] = {
+            ...member,
+            element: charDiv,
+            x: x,
+            originalX: x
+          };
+        });
+      }
+      
+      async startAnimation() {
+        while (true) {
+          await this.runOneCycle();
+          await this.sleep(3000);
+        }
+      }
+      
+      async runOneCycle() {
+        this.resetAll();
+        
+        // 步骤1: 介绍
+        this.setStep(0);
+        this.setInstruction(`📍 ${this.data.tripName} - ${this.data.members.length}人小队出发！`);
+        await this.sleep(2000);
+        
+        // 步骤2: 处理每笔支出
+        this.setStep(1);
+        for (let i = 0; i < this.data.expenses.length; i++) {
+          await this.processExpense(this.data.expenses[i], i);
+        }
+        
+        // 步骤3: 结算场景
+        this.setStep(2);
+        await this.showSettlement();
+        
+        await this.sleep(4000);
+      }
+      
+      async processExpense(expense, index) {
+        const payer = this.characters[expense.payerId];
+        const perPerson = (expense.amount / expense.beneficiaryIds.length).toFixed(0);
+        
+        // 显示地点
+        const locationX = 250;
+        this.showLocation(locationX, expense.icon, expense.description);
+        
+        this.setInstruction(`💳 ${payer.name}支付了 ${expense.description} ¥${expense.amount}`);
+        
+        // 付款人走到前面
+        payer.element.classList.add('walking');
+        payer.element.style.left = `${locationX}px`;
+        await this.sleep(600);
+        payer.element.classList.remove('walking');
+        
+        // 其他人靠拢过来
+        const teamMembers = expense.beneficiaryIds.map(id => this.characters[id]);
+        await this.gatherTeam(teamMembers, locationX);
+        
+        // 付款人跳跃并飞出金币
+        payer.element.classList.add('jumping');
+        this.spawnCoins(locationX, 180, expense.amount, teamMembers.length);
+        
+        // 每人身上飘出金额
+        teamMembers.forEach((member, i) => {
+          const isPayer = member.id === expense.payerId;
+          const amount = isPayer ? expense.amount - perPerson : -perPerson;
+          setTimeout(() => {
+            this.showFloatText(
+              member.x + 25,
+              160,
+              (amount > 0 ? '+' : '') + '¥' + amount,
+              amount >= 0
+            );
+          }, i * 100);
+          
+          this.balances[member.id] += parseFloat(amount);
+        });
+        
+        await this.sleep(1000);
+        payer.element.classList.remove('jumping');
+        
+        // 显示支出卡片
+        this.showExpenseCard(expense, perPerson);
+        
+        // 散开回到原位
+        await this.scatterTeam(teamMembers);
+        
+        // 清除地点
+        document.getElementById('locationsLayer').innerHTML = '';
+        
+        await this.sleep(800);
+      }
+      
+      async gatherTeam(members, centerX) {
+        members.forEach((member, index) => {
+          if (member.x === centerX) return; // 付款人已经在前面了
+          
+          const offset = (index - members.length / 2) * 45;
+          member.element.classList.add('walking');
+          member.element.style.left = `${centerX + offset}px`;
+        });
+        
+        await this.sleep(500);
+        members.forEach(m => m.element.classList.remove('walking'));
+      }
+      
+      async scatterTeam(members) {
+        members.forEach(member => {
+          member.element.classList.add('walking');
+          member.element.style.left = `${member.originalX}px`;
+        });
+        
+        await this.sleep(500);
+        members.forEach(m => m.element.classList.remove('walking'));
+      }
+      
+      spawnCoins(x, y, total, count) {
+        for (let i = 0; i < count; i++) {
+          setTimeout(() => {
+            const coin = document.createElement('div');
+            coin.className = 'coin flying';
+            coin.textContent = '💰';
+            coin.style.left = `${x + (Math.random() - 0.5) * 40}px`;
+            coin.style.top = `${y}px`;
+            
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 80 + Math.random() * 40;
+            coin.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+            coin.style.setProperty('--ty', `${Math.sin(angle) * distance - 50}px`);
+            
+            document.getElementById('effectsLayer').appendChild(coin);
+            setTimeout(() => coin.remove(), 800);
+          }, i * 100);
+        }
+      }
+      
+      showFloatText(x, y, text, isPositive) {
+        const div = document.createElement('div');
+        div.className = `float-text ${isPositive ? 'positive' : 'negative'}`;
+        div.textContent = text;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        document.getElementById('effectsLayer').appendChild(div);
+        setTimeout(() => div.remove(), 1200);
+      }
+      
+      showLocation(x, icon, name) {
+        const layer = document.getElementById('locationsLayer');
+        const div = document.createElement('div');
+        div.className = 'location-marker';
+        div.style.left = `${x}px`;
+        div.innerHTML = `
+          <div class="location-icon">${icon}</div>
+          <div class="location-name">${name}</div>
+        `;
+        layer.appendChild(div);
+      }
+      
+      showExpenseCard(expense, perPerson) {
+        const payer = this.characters[expense.payerId];
+        const list = document.getElementById('expenseList');
+        
+        const card = document.createElement('div');
+        card.className = 'expense-card';
+        card.innerHTML = `
+          <div class="expense-card-header">
+            <span class="expense-card-title">${expense.icon} ${expense.description}</span>
+            <span class="expense-card-amount">¥${expense.amount}</span>
+          </div>
+          <div class="expense-card-detail">${payer.name}支付 · ${expense.beneficiaryIds.length}人分摊 · 每人¥${perPerson}</div>
+        `;
+        
+        list.appendChild(card);
+        setTimeout(() => card.classList.add('show'), 50);
+      }
+      
+      async showSettlement() {
+        // 切换场景背景
+        document.getElementById('scene').classList.add('settlement');
+        document.getElementById('locationsLayer').innerHTML = '';
+        
+        // 隐藏支出列表，显示结算列表
+        document.getElementById('expenseList').style.display = 'none';
+        document.getElementById('settlementList').style.display = 'block';
+        document.getElementById('settlementList').innerHTML = '';
+        
+        // 计算结算 - 显示每个人的余额
+        const debtors = [];  // 应付钱的人（余额为负）
+        const creditors = []; // 应收钱的人（余额为正）
+        
+        this.data.members.forEach(m => {
+          const bal = this.balances[m.id];
+          if (bal < -0.01) {
+            debtors.push({ ...this.characters[m.id], balance: bal, needPay: -bal });
+          } else if (bal > 0.01) {
+            creditors.push({ ...this.characters[m.id], balance: bal, shouldReceive: bal });
+          }
+        });
+        
+        if (debtors.length === 0 && creditors.length === 0) {
+          this.setInstruction('🎉 账目已平，无需转账！');
+          return;
+        }
+        
+        // 显示余额总结
+        this.setInstruction('📊 计算每个人的收支...');
+        await this.sleep(1000);
+        
+        // 重新排列小人位置 - 所有人分散站，不要叠在一起
+        const sceneWidth = 360; // 实际可用宽度
+        const padding = 50;
+        const availableWidth = sceneWidth - padding * 2;
+        const allPeople = [...debtors, ...creditors];
+        const spacing = availableWidth / (allPeople.length - 1 || 1);
+        
+        // 所有人均匀分布
+        allPeople.forEach((person, index) => {
+          const newX = padding + spacing * index;
+          person.element.classList.add('walking');
+          person.element.style.left = `${newX}px`;
+          person.element.style.top = '180px';
+          // 更新x坐标用于金币飞行
+          person.x = newX;
+        });
+        
+        await this.sleep(800);
+        [...debtors, ...creditors].forEach(m => m.element.classList.remove('walking'));
+        
+        // 显示结算列表
+        this.setInstruction('💸 开始转账...');
+        await this.sleep(500);
+        
+        let i = 0, j = 0;
+        while (i < debtors.length && j < creditors.length) {
+          const debtor = debtors[i];
+          const creditor = creditors[j];
+          const amt = Math.min(debtor.needPay, creditor.shouldReceive);
+          
+          if (amt > 0.01) {
+            // 清晰显示转账关系：应付的人 → 应收的人
+            const instructionText = `${debtor.name}(${debtor.balance.toFixed(0)}) 给 ${creditor.name}(+${creditor.balance.toFixed(0)}) ¥${amt.toFixed(0)}`;
+            this.setInstruction(instructionText);
+            
+            // 高亮相关小人
+            debtor.element.classList.add('active');
+            creditor.element.classList.add('active');
+            
+            // 添加结算项到列表 - 清晰显示方向
+            this.addSettlementItem(debtor, creditor, amt);
+            
+            // 金币从债务人飞向债权人
+            this.flyCoinBetween(debtor.x + 25, 180, creditor.x + 25, 180);
+            
+            await this.sleep(1800);
+            
+            debtor.element.classList.remove('active');
+            creditor.element.classList.remove('active');
+          }
+          
+          debtor.needPay -= amt;
+          creditor.shouldReceive -= amt;
+          if (debtor.needPay < 0.01) i++;
+          if (creditor.shouldReceive < 0.01) j++;
+        }
+        
+        this.setInstruction('✅ 结算完成！账目已平');
+      }
+      
+      addSettlementItem(debtor, creditor, amount) {
+        const list = document.getElementById('settlementList');
+        const item = document.createElement('div');
+        item.className = 'settlement-item';
+        item.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: 600; color: #EF5350;">${debtor.name}</span>
+            <span style="font-size: 11px; color: #EF5350; background: #FFEBEE; padding: 2px 6px; border-radius: 4px;">应付¥${(-debtor.balance).toFixed(0)}</span>
+          </div>
+          <span class="settlement-arrow">→</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: 600; color: #66BB6A;">${creditor.name}</span>
+            <span style="font-size: 11px; color: #66BB6A; background: #E8F5E9; padding: 2px 6px; border-radius: 4px;">应收¥${creditor.balance.toFixed(0)}</span>
+          </div>
+          <span class="settlement-amount">¥${amount.toFixed(0)}</span>
+        `;
+        list.appendChild(item);
+        setTimeout(() => item.classList.add('show'), 50);
+      }
+      
+      flyCoinBetween(x1, y1, x2, y2) {
+        const coin = document.createElement('div');
+        coin.className = 'coin';
+        coin.textContent = '💰';
+        coin.style.left = `${x1}px`;
+        coin.style.top = `${y1}px`;
+        coin.style.transition = 'all 0.6s ease-in-out';
+        document.getElementById('effectsLayer').appendChild(coin);
+        
+        setTimeout(() => {
+          coin.style.left = `${x2}px`;
+          coin.style.top = `${y2}px`;
+          coin.style.transform = 'scale(0.5)';
+        }, 50);
+        
+        setTimeout(() => coin.remove(), 650);
+      }
+      
+      resetAll() {
+        // 重置余额
+        this.data.members.forEach(m => {
+          this.balances[m.id] = 0;
+        });
+        
+        // 重置场景
+        document.getElementById('scene').classList.remove('settlement');
+        document.getElementById('locationsLayer').innerHTML = '';
+        document.getElementById('effectsLayer').innerHTML = '';
+        document.getElementById('expenseList').innerHTML = '';
+        document.getElementById('expenseList').style.display = 'block';
+        document.getElementById('settlementList').innerHTML = '';
+        document.getElementById('settlementList').style.display = 'none';
+        
+        // 重置小人位置
+        const startX = 60;
+        const gap = 100;
+        const groundY = 210;
+        
+        this.data.members.forEach((m, index) => {
+          const char = this.characters[m.id];
+          char.x = startX + index * gap;
+          char.element.style.left = `${char.x}px`;
+          char.element.style.top = `${groundY}px`;
+          char.element.classList.remove('active', 'walking', 'jumping');
+        });
+      }
+      
+      setStep(step) {
+        this.currentStep = step;
+        document.querySelectorAll('.dot').forEach((el, i) => {
+          el.classList.toggle('active', i === step);
+        });
+      }
+      
+      setInstruction(text) {
+        document.getElementById('instruction').textContent = text;
+      }
+      
+      sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+    }
+    
+    // 启动
+    new SplitAnimation(demoData);
+  </script>
+</body>
+</html>

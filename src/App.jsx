@@ -45,6 +45,171 @@ function App() {
 
   const activeTrip = useMemo(() => trips.find(t => t.id === activeTripId) || null, [trips, activeTripId]);
 
+  // 分账演示弹窗状态
+  const [showDemoModal, setShowDemoModal] = useState(false);
+
+  // 分账演示动画组件
+  const SplitDemoAnimation = ({ onClose, tripName, members, expenses, balances, settlements }) => {
+    const [step, setStep] = useState(0);
+    const [instruction, setInstruction] = useState('准备开始...');
+    const [currentExpense, setCurrentExpense] = useState(0);
+    const [showSettlement, setShowSettlement] = useState(false);
+    
+    const memberEmojis = ['😊', '😎', '🤗', '🥳', '😄', '🤔'];
+    
+    const iconMap = {
+      '车': '🚗', '租': '🚗', '油': '⛽', '交通': '🚌',
+      '食': '🍽️', '餐': '🍽️', '饭': '🍚', '火锅': '🍲', '烧烤': '🍖', '食材': '🛒', '超市': '🛒', '买': '🛍️',
+      '住': '🏨', '房': '🏨', '酒店': '🏨', '民宿': '🏠',
+      '票': '🎫', '门': '🎫', '景点': '🏞️', '玩': '🎮',
+      '酒': '🍺', '水': '💧', '饮': '🥤'
+    };
+    
+    const getIcon = (desc) => {
+      for (let key in iconMap) {
+        if (desc.includes(key)) return iconMap[key];
+      }
+      return '💰';
+    };
+    
+    useEffect(() => {
+      let cancelled = false;
+      
+      const runAnimation = async () => {
+        while (!cancelled) {
+          setShowSettlement(false);
+          setCurrentExpense(0);
+          
+          // 步骤1: 介绍
+          setStep(0);
+          setInstruction(`📍 ${tripName} - ${members.length}人小队出发！`);
+          await new Promise(r => setTimeout(r, 2500));
+          if (cancelled) break;
+          
+          // 步骤2: 每笔支出
+          for (let i = 0; i < expenses.length; i++) {
+            setStep(1);
+            setCurrentExpense(i);
+            const exp = expenses[i];
+            const payer = members.find(m => m.id === exp.payerId);
+            setInstruction(`${getIcon(exp.description)} ${payer?.name}支付了 ${exp.description} ¥${exp.amount}`);
+            await new Promise(r => setTimeout(r, 3000));
+            if (cancelled) break;
+          }
+          if (cancelled) break;
+          
+          // 步骤3: 结算
+          setStep(2);
+          setShowSettlement(true);
+          setInstruction('💸 计算最优结算方案...');
+          await new Promise(r => setTimeout(r, 2000));
+          setStep(3);
+          setInstruction('✅ 结算完成！账目已平');
+          await new Promise(r => setTimeout(r, 4000));
+          if (cancelled) break;
+        }
+      };
+      
+      runAnimation();
+      
+      return () => { cancelled = true; };
+    }, [tripName, members, expenses]);
+    
+    const currentExp = expenses[currentExpense];
+    const payer = currentExp ? members.find(m => m.id === currentExp.payerId) : null;
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+          {/* 头部 */}
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-4 flex justify-between items-center">
+            <h3 className="text-white font-bold text-lg flex items-center gap-2">
+              <span>🎬</span> 分账演示
+            </h3>
+            <button 
+              onClick={onClose}
+              className="text-white/80 hover:text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20"
+            >
+              ✕
+            </button>
+          </div>
+          
+          {/* 动画区域 */}
+          <div className="p-6">
+            {/* 步骤指示器 */}
+            <div className="flex justify-center gap-2 mb-4">
+              {['准备', '支出', '结算', '完成'].map((label, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <div className={`h-2 rounded-full transition-all mb-1 ${step === i ? 'w-8 bg-indigo-500' : 'w-2 bg-slate-300'}`} />
+                  <span className={`text-xs ${step === i ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}>{label}</span>
+                </div>
+              ))}
+            </div>
+            
+            {/* 说明文字 */}
+            <p className="text-center text-base text-slate-700 font-medium mb-6 min-h-[24px]">{instruction}</p>
+            
+            {/* 支出场景 */}
+            {step === 1 && currentExp && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 mb-4 text-center">
+                <div className="text-5xl mb-2">{getIcon(currentExp.description)}</div>
+                <div className="text-lg font-bold text-slate-800">{currentExp.description}</div>
+                <div className="text-2xl font-extrabold text-indigo-600 mt-1">¥{currentExp.amount}</div>
+                <div className="text-sm text-slate-500 mt-1">{payer?.name} 支付 · {currentExp.beneficiaryIds.length}人分摊</div>
+              </div>
+            )}
+            
+            {/* 结算场景 */}
+            {showSettlement && settlements.length > 0 && (
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 mb-4">
+                <div className="text-sm font-bold text-slate-600 mb-3 text-center">最终结算</div>
+                {settlements.map((s, idx) => {
+                  const from = members.find(m => m.id === s.from);
+                  const to = members.find(m => m.id === s.to);
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-white rounded-xl p-3 mb-2 shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-red-500">{from?.name}</span>
+                        <span className="text-slate-400">→</span>
+                        <span className="font-bold text-green-500">{to?.name}</span>
+                      </div>
+                      <span className="font-extrabold text-indigo-600">¥{(Number(s.amount) || 0).toFixed(0)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* 小人队伍 */}
+            <div className="flex justify-center gap-6 py-4">
+              {members.map((m, i) => {
+                const bal = balances[m.id] || 0;
+                const isActive = step === 1 && currentExp?.beneficiaryIds.includes(m.id);
+                const isPayer = step === 1 && currentExp?.payerId === m.id;
+                
+                return (
+                  <div key={m.id} className="flex flex-col items-center">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg transition-all ${isPayer ? 'ring-4 ring-yellow-400 scale-110' : isActive ? 'ring-2 ring-indigo-300' : ''} ${showSettlement ? (bal > 0 ? 'bg-green-100' : bal < 0 ? 'bg-red-100' : 'bg-slate-100') : 'bg-white'}`}>
+                      {memberEmojis[i % memberEmojis.length]}
+                    </div>
+                    <span className="text-sm font-bold text-slate-700 mt-2">{m.name}</span>
+                    {showSettlement && Math.abs(bal) > 0.01 && (
+                      <span className={`text-xs font-bold mt-1 ${bal > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {bal > 0 ? '应收' : '应付'} ¥{Math.abs(bal).toFixed(0)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <p className="text-center text-xs text-slate-400">动画自动循环播放</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const { balances, settlements, totalSpent } = useMemo(() => {
     if (!activeTrip) return { balances: {}, settlements: [], totalSpent: 0 };
     const result = window.calculateSettlements(activeTrip.members, activeTrip.expenses);
@@ -431,6 +596,27 @@ function App() {
             <p id="settlement-time" className="text-[10px] text-slate-400 mt-1" style={{display: 'none'}}>生成时间: {generatedTime}</p>
           </div>
 
+          {/* 分账演示按钮 */}
+          <button 
+            onClick={() => setShowDemoModal(true)}
+            className="w-full mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl p-4 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-shadow"
+          >
+            <span className="text-xl">🎬</span>
+            <span className="font-bold">查看分账演示</span>
+          </button>
+
+          {/* 分账演示弹窗 */}
+          {showDemoModal && (
+            <SplitDemoAnimation 
+              onClose={() => setShowDemoModal(false)}
+              tripName={activeTrip.name}
+              members={activeTrip.members}
+              expenses={activeTrip.expenses}
+              balances={balances}
+              settlements={settlements}
+            />
+          )}
+
           {/* 结算方案 */}
           <div className="text-left mb-6">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1">
@@ -452,7 +638,7 @@ function App() {
                         <span className="text-slate-400 text-xs">→</span>
                         <span className="font-bold text-slate-700">{toUser?.name || ''}</span>
                       </div>
-                      <span className="font-extrabold text-lg text-[#4338ca]">{formatMoney(s.amount)}</span>
+                      <span className="font-extrabold text-lg text-[#4338ca]">{formatMoney(Number(s.amount) || 0)}</span>
                     </div>
                   );
                 })
