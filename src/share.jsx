@@ -102,6 +102,31 @@ function ShareApp() {
     return data.expenses.reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
   }, [data]);
 
+  const openDemoWindow = () => {
+    if (!data) return;
+    const payload = {
+      tripName: data.tripName || '分账演示',
+      members: (data.members || []).map(m => ({
+        id: m.id,
+        name: m.name
+      })),
+      expenses: (data.expenses || []).map(exp => ({
+        id: exp.id,
+        description: exp.description || '支出',
+        amount: Number(exp.amount) || 0,
+        payerId: exp.payerId,
+        beneficiaryIds: Array.isArray(exp.beneficiaryIds) ? exp.beneficiaryIds : []
+      }))
+    };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+    const demoUrl = new URL('./demo-animation.html', window.location.href);
+    demoUrl.searchParams.set('data', encoded);
+    const win = window.open(demoUrl.toString(), '_blank', 'noopener,noreferrer');
+    if (!win) {
+      window.location.href = demoUrl.toString();
+    }
+  };
+
   // 辅助函数：获取分摊人数描述
   const getSplitDesc = (beneficiaryIds) => {
     const weightedCount = beneficiaryIds.reduce((sum, id) => {
@@ -151,7 +176,14 @@ function ShareApp() {
             <h2 className="text-2xl font-bold text-slate-800 mb-2">{data.tripName}</h2>
             
             {/* 总支出 - 大字体突出显示 */}
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 mb-3">
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 mb-3 relative">
+              <button
+                onClick={openDemoWindow}
+                className="absolute top-3 right-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md hover:shadow-lg transition-shadow"
+                title="查看分账演示"
+              >
+                🎬 演示
+              </button>
               <p className="text-slate-500 text-sm mb-1">总支出</p>
               <p className="text-4xl font-extrabold text-indigo-600">{formatMoney(totalSpent)}</p>
               <p className="text-xs text-slate-400 mt-1">共 {data.expenses.length} 笔支出</p>

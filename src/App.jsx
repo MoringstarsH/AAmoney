@@ -90,6 +90,29 @@ function App() {
     setWarningMessage(message);
     setTimeout(() => setWarningMessage(null), 3000);
   };
+
+  const openDemoWindow = () => {
+    if (!activeTrip) return;
+    const payload = {
+      tripName: activeTrip.name || '分账演示',
+      members: (activeTrip.members || []).map(m => ({
+        id: m.id,
+        name: m.name
+      })),
+      expenses: (activeTrip.expenses || []).map(exp => ({
+        id: exp.id,
+        description: exp.description || '支出',
+        amount: Number(exp.amount) || 0,
+        payerId: exp.payerId,
+        beneficiaryIds: Array.isArray(exp.beneficiaryIds) ? exp.beneficiaryIds : []
+      }))
+    };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+    const demoUrl = new URL('./demo-animation.html', window.location.href);
+    demoUrl.searchParams.set('data', encoded);
+    window.open(demoUrl.toString(), '_blank', 'noopener,noreferrer');
+  };
+
   useEffect(() => { window.saveTrips(trips); }, [trips]);
 
   const renderTripList = () => (
@@ -402,7 +425,14 @@ function App() {
             <h2 className="text-2xl font-bold text-slate-800 mb-2">{activeTrip.name}</h2>
             
             {/* 总支出 - 大字体突出显示 */}
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 mb-3">
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 mb-3 relative">
+              <button
+                onClick={openDemoWindow}
+                className="absolute top-3 right-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md hover:shadow-lg transition-shadow"
+                title="查看分账演示"
+              >
+                🎬 演示
+              </button>
               <p className="text-slate-500 text-sm mb-1">总支出</p>
               <p className="text-4xl font-extrabold text-indigo-600">{formatMoney(totalSpent)}</p>
               <p className="text-xs text-slate-400 mt-1">共 {activeTrip.expenses.length} 笔支出</p>
@@ -452,7 +482,7 @@ function App() {
                         <span className="text-slate-400 text-xs">→</span>
                         <span className="font-bold text-slate-700">{toUser?.name || ''}</span>
                       </div>
-                      <span className="font-extrabold text-lg text-[#4338ca]">{formatMoney(s.amount)}</span>
+                      <span className="font-extrabold text-lg text-[#4338ca]">{formatMoney(Number(s.amount) || 0)}</span>
                     </div>
                   );
                 })

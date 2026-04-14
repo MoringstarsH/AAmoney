@@ -1,0 +1,384 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分账演示动画 - LumiSplit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: #f5f7fa;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 12px;
+    }
+    
+    .demo-container {
+      width: 100%;
+      max-width: 560px;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    
+    /* 场景区域 */
+    .scene {
+      position: relative;
+      height: 300px;
+      background: linear-gradient(180deg, #E3F2FD 0%, #BBDEFB 100%);
+      overflow: hidden;
+    }
+    
+    .scene.settlement {
+      background: linear-gradient(180deg, #F3E5F5 0%, #E1BEE7 100%);
+    }
+    
+    /* 地面 */
+    .ground {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 60px;
+      background: #90A4AE;
+    }
+    
+    /* 地点标记 */
+    .location-marker {
+      position: absolute;
+      bottom: 60px;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+    
+    .location-icon {
+      width: 50px;
+      height: 50px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      margin: 0 auto 8px;
+    }
+    
+    .location-name {
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    /* 卡通小人 - 圆头圆身 */
+    .character {
+      position: absolute;
+      width: 50px;
+      height: 84px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+    }
+    
+    .char-body {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    /* 头 */
+    .char-head {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #FFD93D;
+      border: 2px solid rgba(0,0,0,0.1);
+    }
+    
+    /* 脸 */
+    .char-face {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px;
+    }
+    
+    /* 身体 */
+    .char-torso {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      position: absolute;
+      top: 26px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
+    /* 名字 */
+    .char-name {
+      position: absolute;
+      top: 56px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: #37474F;
+      background: rgba(255,255,255,0.95);
+      padding: 3px 10px;
+      border-radius: 10px;
+      white-space: nowrap;
+      max-width: 84px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* 走路动画 */
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    
+    .character.walking {
+      animation: bounce 0.3s infinite;
+    }
+    
+    /* 跳跃 */
+    @keyframes jump {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-25px) scale(1.05); }
+    }
+    
+    .character.jumping {
+      animation: jump 0.5s ease;
+    }
+    
+    /* 选中效果 */
+    .character.active .char-head {
+      box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.5);
+    }
+    
+    /* 金币 */
+    .coin {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(145deg, #FFD700, #FFA000);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+      z-index: 20;
+      border: 2px solid #FF8F00;
+    }
+    
+    @keyframes coinFly {
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(360deg); opacity: 0; }
+    }
+    
+    .coin.flying {
+      animation: coinFly 0.8s ease-out forwards;
+    }
+    
+    /* 金额飘字 */
+    .float-text {
+      position: absolute;
+      font-size: 18px;
+      font-weight: 800;
+      z-index: 25;
+      animation: floatUp 1.2s ease-out forwards;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .float-text.negative {
+      color: #EF5350;
+    }
+    
+    .float-text.positive {
+      color: #66BB6A;
+    }
+    
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-60px) scale(1.1); opacity: 0; }
+    }
+    
+    /* 底部信息面板 */
+    .info-panel {
+      padding: 16px;
+      background: white;
+    }
+    
+    .step-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #E0E0E0;
+      transition: all 0.3s;
+    }
+    
+    .dot.active {
+      background: #2196F3;
+      width: 20px;
+      border-radius: 3px;
+    }
+    
+    .instruction {
+      text-align: center;
+      font-size: 14px;
+      color: #546E7A;
+      font-weight: 500;
+      margin-bottom: 12px;
+      min-height: 20px;
+    }
+    
+    /* 支出明细卡片 */
+    .expense-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.4s ease;
+    }
+    
+    .expense-card.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    
+    .expense-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    
+    .expense-card-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .expense-card-amount {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    
+    .expense-card-detail {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+    
+    /* 结算列表 */
+    .settlement-list {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .settlement-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #f5f7fa;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      opacity: 0;
+      transform: scale(0.9);
+      transition: all 0.3s ease;
+    }
+    
+    .settlement-item.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+    
+    .settlement-arrow {
+      color: #9E9E9E;
+      font-size: 20px;
+    }
+    
+    .settlement-amount {
+      font-weight: 700;
+      color: #667eea;
+      font-size: 16px;
+    }
+    
+    /* 角色颜色 */
+    .char-color-1 { background: #FF6B6B; }
+    .char-color-2 { background: #4ECDC4; }
+    .char-color-3 { background: #45B7D1; }
+    .char-color-4 { background: #96CEB4; }
+    .char-color-5 { background: #FFEAA7; }
+    .char-color-6 { background: #DDA0DD; }
+
+    @media (max-width: 640px) {
+      .scene { height: 280px; }
+      .character { width: 46px; height: 80px; }
+      .char-head { width: 30px; height: 30px; }
+      .char-torso { width: 26px; height: 26px; top: 24px; }
+      .char-name { top: 52px; max-width: 76px; font-size: 10px; }
+      .location-name { font-size: 11px; }
+      .instruction { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <!-- 场景区域 -->
+    <div class="scene" id="scene">
+      <div class="ground"></div>
+      <div id="locationsLayer"></div>
+      <div id="charactersLayer"></div>
+      <div id="effectsLayer"></div>
+    </div>
+    
+    <!-- 信息面板 -->
+    <div class="info-panel">
+      <!-- 步骤指示器 -->
+      <div class="step-dots" id="stepDots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      
+      <!-- 说明文字 -->
+      <div class="instruction" id="instruction">准备开始...</div>
+      
+      <!-- 支出明细区域 -->
+      <div id="expenseList"></div>
+      
+      <!-- 结算列表区域 -->
+      <div class="settlement-list" id="settlementList" style="display: none;"></div>
+    </div>
+  </div>
+
+    <script src="./src/demo-animation-page.js?v=1"></script>
+</body>
+</html>
+

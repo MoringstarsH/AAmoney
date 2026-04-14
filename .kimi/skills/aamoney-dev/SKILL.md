@@ -278,7 +278,66 @@ export const saveTrips = (trips) => {
 };
 ```
 
-### 8. 交互优化
+### 8. 游戏风格演示动画 (SplitDemoModal)
+
+结算页面添加了可视化分账演示动画，用小人角色模拟真实分账过程：
+
+```jsx
+// 使用方式
+{showDemoModal && (
+  <SplitDemoModal
+    isOpen={showDemoModal}
+    onClose={() => setShowDemoModal(false)}
+    tripName={activeTrip.name}
+    members={activeTrip.members}
+    expenses={activeTrip.expenses}
+    balances={balances}
+    settlements={settlements}
+  />
+)}
+```
+
+**动画特性**:
+- 角色系统：emoji头像 + 彩色身体，每人固定颜色
+- 行走动画： payer 走向支出地点，受益人聚集
+- 支付动画： payer 跳跃 + 金币飞散效果
+- 智能图标：根据支出描述自动匹配图标（🚗车/🍽️餐/🏨住）
+- 结算场景：背景变紫色，角色均匀分布显示应收/应付
+
+**图标映射规则**:
+```javascript
+const iconMap = {
+  '车': '🚗', '食': '🍽️', '饭': '🍚', '住': '🏨',
+  '票': '🎫', '酒': '🍺', '超市': '🛒'
+};
+```
+
+### 9. 数字金额安全处理
+
+#### toFixed 错误预防
+结算金额可能为字符串或 undefined，必须做类型转换：
+
+```javascript
+// ❌ 错误：可能导致 "toFixed is not a function"
+<span>¥{amount.toFixed(0)}</span>
+<span>¥{settlements[i].amount.toFixed(0)}</span>
+
+// ✅ 正确：使用 Number() 转换
+<span>¥{(Number(amount) || 0).toFixed(0)}</span>
+<span>¥{(Number(s.amount) || 0).toFixed(0)}</span>
+
+// 或封装为工具函数
+const formatMoney = (amount) => {
+  return '¥' + (Number(amount) || 0).toFixed(0);
+};
+```
+
+**常见触发场景**:
+- 结算数据从计算函数返回时未做 Number 转换
+- 分享链接中的金额被 JSON 序列化/反序列化后变为字符串
+- API 返回的数据类型不统一
+
+### 10. 交互优化
 
 #### 数字输入优化
 小组人数输入框支持清空后重新输入：
@@ -305,6 +364,57 @@ const [memberCountInput, setMemberCountInput] = useState('2');
   }}
 />
 ```
+
+### 11. 独立分账演示页与统一入口
+
+#### 设计目标
+将“分账演示”从结算页内嵌弹窗改为**独立页面**，并在主结算页与分享页提供一致的轻量入口（小按钮）。
+
+#### 入口策略（主页面 + 分享页面）
+在“总支出”卡片右上角放置小按钮：
+
+```jsx
+<button
+  onClick={openDemoWindow}
+  className="absolute top-3 right-3 ... text-xs ... rounded-full"
+>
+  🎬 演示
+</button>
+```
+
+并删除卡片下方的大按钮，避免占用纵向空间。
+
+#### 数据透传方案
+演示页通过 URL 参数 `data` 接收账单快照：
+
+```javascript
+const payload = { tripName, members, expenses };
+const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+const demoUrl = new URL('./demo-animation.html', window.location.href);
+demoUrl.searchParams.set('data', encoded);
+window.open(demoUrl.toString(), '_blank', 'noopener,noreferrer');
+```
+
+演示页解码后回放真实数据；若缺失或损坏则回退到内置示例数据。
+
+#### 页面拆分
+- `demo-animation.html` 只保留结构和样式
+- `src/demo-animation-page.js` 负责完整动画逻辑与参数解析
+
+这样便于维护，避免 HTML 内联脚本过长难以迭代。
+
+#### 防越界与可见性修复
+为解决“角色超出画布”和“名字看不见”：
+
+1. 角色 X 坐标统一通过 `clampLeft()` 夹紧到可视区。
+2. 初始站位、聚拢站位、结算重排全部基于场景宽度动态计算（`getLineLefts()`）。
+3. 名字标签下移到角色下方，并添加 `max-width + text-overflow: ellipsis`。
+4. 增加移动端断点样式，缩小角色尺寸并保持标签可读。
+
+#### 兼容性要点
+- `window.open` 可能被拦截，分享页需提供 fallback：
+  - 新窗口失败时 `window.location.href = demoUrl`
+- 每次页面结构变化后建议递增 `?v=...` 防缓存。
 
 ## 部署方案
 
@@ -337,6 +447,28 @@ const Share2 = ({ size = 20 }) => <span style={{ fontSize: size }}>🔗</span>;
 - 使用 `?t=timestamp` 参数强制刷新
 
 ## 更新日志
+
+### 2026-04-14
+- 🎬 分账演示改为独立页面（`demo-animation.html`）
+  - 新增 `src/demo-animation-page.js` 承载演示逻辑
+  - 支持通过 URL 参数接收实时账单数据回放
+- 🧭 主结算页与分享页统一入口
+  - 按钮改为“总支出”卡片右上角小按钮（`🎬 演示`）
+  - 移除卡片下方大按钮
+- 🐛 修复演示页显示问题
+  - 角色位置防越界（动态布局 + clamp）
+  - 角色姓名标签可见（下移并截断）
+  - 移动端与 Web 双端自适配
+
+### 2025-04-13
+- 🎬 添加分账演示动画组件 (SplitDemoModal)
+  - 小人角色行走/跳跃动画
+  - 地点图标智能匹配
+  - 金币飞散效果
+  - 结算场景角色分布
+- 🐛 修复 `toFixed is not a function` 错误
+  - 结算金额显示添加 Number() 转换
+  - 分享链接金额处理加固
 
 ### 2025-04-12
 - ✨ 添加成员支出统计（总支出下方显示每人支付总额）
