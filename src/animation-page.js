@@ -1,9 +1,9 @@
 ﻿const fallbackDemoData = {
   tripName: '周末露营',
   members: [
-    { id: 'm1', name: '小李' },
-    { id: 'm2', name: '小王' },
-    { id: 'm3', name: '小陈' }
+    { id: 'm1', name: '小李', isGroup: false, member_count: 1 },
+    { id: 'm2', name: '小王', isGroup: false, member_count: 1 },
+    { id: 'm3', name: '小陈', isGroup: false, member_count: 1 }
   ],
   expenses: [
     { id: 'e1', description: '租车费', amount: 300, payerId: 'm1', beneficiaryIds: ['m1', 'm2', 'm3'] },
@@ -30,10 +30,19 @@ function decodeDataFromUrl() {
     const parsed = JSON.parse(decodeURIComponent(atob(raw)));
     if (!parsed || !Array.isArray(parsed.members)) return null;
 
-    const members = parsed.members.map((m, index) => ({
-      id: String(m.id || `m${index + 1}`),
-      name: String(m.name || `成员${index + 1}`)
-    }));
+    const members = parsed.members.map((m, index) => {
+      const isGroup = m?.isGroup === true || m?.g === 1;
+      const rawCount = Number(m?.member_count ?? m?.c ?? (isGroup ? 2 : 1));
+      const memberCount = Number.isFinite(rawCount)
+        ? Math.max(1, Math.min(99, Math.floor(rawCount)))
+        : (isGroup ? 2 : 1);
+      return {
+        id: String(m.id || `m${index + 1}`),
+        name: String(m.name || `成员${index + 1}`),
+        isGroup,
+        member_count: memberCount
+      };
+    });
     const idSet = new Set(members.map((m) => m.id));
 
     const expenses = Array.isArray(parsed.expenses)
@@ -169,6 +178,23 @@ class SplitAnimation {
     });
   }
 
+  getMemberWeight(memberId) {
+    const member = this.data.members.find((m) => m.id === memberId);
+    if (!member) return 1;
+    if (typeof member.member_count === 'number' && Number.isFinite(member.member_count)) {
+      return Math.max(1, Math.min(99, Math.floor(member.member_count)));
+    }
+    return member.isGroup ? 2 : 1;
+  }
+
+  getSplitDescription(beneficiaryIds, weightedTotal) {
+    const groupCount = beneficiaryIds.length;
+    if (weightedTotal === groupCount) {
+      return `${groupCount}人分摊`;
+    }
+    return `${groupCount}组(共${weightedTotal}人)分摊`;
+  }
+
   createCharacters() {
     const container = document.getElementById('charactersLayer');
     container.innerHTML = '';
@@ -236,11 +262,12 @@ class SplitAnimation {
 
     const payer = this.characters[payerId];
     const amount = Number(expense.amount) || 0;
-    const perPerson = round2(amount / beneficiaryIds.length);
+    const weightedTotal = beneficiaryIds.reduce((sum, id) => sum + this.getMemberWeight(id), 0);
+    const perUnit = round2(amount / (weightedTotal || 1));
     const locationLeft = this.clampLeft(Math.round(this.sceneWidth * 0.62) - this.charWidth / 2);
 
     this.showLocation(this.leftToCenter(locationLeft), expense.icon, expense.description);
-    this.setInstruction(`💳 ${payer.name}支付了 ${expense.description} ¥${amount.toFixed(0)}`);
+    this.setInstruction(`💳 ${payer.name}支付了 ${expense.description} ¥${amount.toFixed(2)}`);
 
     payer.element.classList.add('walking');
     payer.element.style.left = `${locationLeft}px`;
@@ -254,19 +281,29 @@ class SplitAnimation {
     payer.element.classList.add('jumping');
     this.spawnCoins(this.leftToCenter(locationLeft), this.groundY - 14, Math.max(4, teamMembers.length));
 
-    teamMembers.forEach((member, index) => {
-      const isPayer = member.id === payerId;
-      const delta = round2(isPayer ? amount - perPerson : -perPerson);
+    const deltas = {};
+    teamMembers.forEach((member) => {
+      const share = round2(perUnit * this.getMemberWeight(member.id));
+      const delta = round2(-share);
       this.balances[member.id] = round2((this.balances[member.id] || 0) + delta);
+      deltas[member.id] = round2((deltas[member.id] || 0) + delta);
+    });
+
+    this.balances[payerId] = round2((this.balances[payerId] || 0) + amount);
+    deltas[payerId] = round2((deltas[payerId] || 0) + amount);
+
+    const deltaEntries = Object.entries(deltas).filter(([id, delta]) => this.characters[id] && Math.abs(delta) > 0.01);
+    deltaEntries.forEach(([id, delta], index) => {
+      const member = this.characters[id];
       setTimeout(() => {
-        this.showFloatText(this.leftToCenter(member.x), this.groundY - 24, `${delta > 0 ? '+' : ''}¥${Math.abs(delta).toFixed(0)}`, delta >= 0);
+        this.showFloatText(this.leftToCenter(member.x), this.groundY - 24, `${delta > 0 ? '+' : ''}¥${Math.abs(delta).toFixed(2)}`, delta >= 0);
       }, index * 100);
     });
 
     await this.sleep(900);
     payer.element.classList.remove('jumping');
 
-    this.showExpenseCard(expense, perPerson);
+    this.showExpenseCard(expense, perUnit, weightedTotal);
     await this.scatterTeam(teamMembers);
     document.getElementById('locationsLayer').innerHTML = '';
     await this.sleep(650);
@@ -341,18 +378,19 @@ class SplitAnimation {
     layer.appendChild(div);
   }
 
-  showExpenseCard(expense, perPerson) {
+  showExpenseCard(expense, perUnit, weightedTotal) {
     const payer = this.characters[expense.payerId] || this.characters[expense.beneficiaryIds[0]];
     const list = document.getElementById('expenseList');
+    const splitDesc = this.getSplitDescription(expense.beneficiaryIds || [], weightedTotal);
 
     const card = document.createElement('div');
     card.className = 'expense-card';
     card.innerHTML = `
       <div class="expense-card-header">
         <span class="expense-card-title">${expense.icon} ${expense.description}</span>
-        <span class="expense-card-amount">¥${round2(expense.amount).toFixed(0)}</span>
+        <span class="expense-card-amount">¥${round2(expense.amount).toFixed(2)}</span>
       </div>
-      <div class="expense-card-detail">${payer ? payer.name : '成员'}支付 · ${expense.beneficiaryIds.length}人分摊 · 每人¥${round2(perPerson).toFixed(0)}</div>
+      <div class="expense-card-detail">${payer ? payer.name : '成员'}支付 · ${splitDesc} · 单人应付¥${round2(perUnit).toFixed(2)}</div>
     `;
 
     list.appendChild(card);
@@ -373,6 +411,8 @@ class SplitAnimation {
       if (bal < -0.01) debtors.push({ ...this.characters[member.id], needPay: -bal, balance: bal });
       if (bal > 0.01) creditors.push({ ...this.characters[member.id], shouldReceive: bal, balance: bal });
     });
+    debtors.sort((a, b) => a.balance - b.balance);
+    creditors.sort((a, b) => b.balance - a.balance);
 
     if (!debtors.length && !creditors.length) {
       this.setStep(3);
@@ -404,10 +444,10 @@ class SplitAnimation {
     while (i < debtors.length && j < creditors.length) {
       const debtor = debtors[i];
       const creditor = creditors[j];
-      const amount = Math.min(debtor.needPay, creditor.shouldReceive);
+      const amount = round2(Math.min(debtor.needPay, creditor.shouldReceive));
 
       if (amount > 0.01) {
-        this.setInstruction(`${debtor.name} → ${creditor.name}  ¥${amount.toFixed(0)}`);
+        this.setInstruction(`${debtor.name} → ${creditor.name}  ¥${amount.toFixed(2)}`);
         debtor.element.classList.add('active');
         creditor.element.classList.add('active');
         this.addSettlementItem(debtor, creditor, amount);
@@ -417,8 +457,8 @@ class SplitAnimation {
         creditor.element.classList.remove('active');
       }
 
-      debtor.needPay -= amount;
-      creditor.shouldReceive -= amount;
+      debtor.needPay = round2(debtor.needPay - amount);
+      creditor.shouldReceive = round2(creditor.shouldReceive - amount);
       if (debtor.needPay < 0.01) i++;
       if (creditor.shouldReceive < 0.01) j++;
     }
@@ -434,14 +474,14 @@ class SplitAnimation {
     item.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="font-weight: 600; color: #EF5350;">${debtor.name}</span>
-        <span style="font-size: 11px; color: #EF5350; background: #FFEBEE; padding: 2px 6px; border-radius: 4px;">应付¥${(-debtor.balance).toFixed(0)}</span>
+        <span style="font-size: 11px; color: #EF5350; background: #FFEBEE; padding: 2px 6px; border-radius: 4px;">应付¥${(-debtor.balance).toFixed(2)}</span>
       </div>
       <span class="settlement-arrow">→</span>
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="font-weight: 600; color: #66BB6A;">${creditor.name}</span>
-        <span style="font-size: 11px; color: #66BB6A; background: #E8F5E9; padding: 2px 6px; border-radius: 4px;">应收¥${creditor.balance.toFixed(0)}</span>
+        <span style="font-size: 11px; color: #66BB6A; background: #E8F5E9; padding: 2px 6px; border-radius: 4px;">应收¥${creditor.balance.toFixed(2)}</span>
       </div>
-      <span class="settlement-amount">¥${amount.toFixed(0)}</span>
+      <span class="settlement-amount">¥${amount.toFixed(2)}</span>
     `;
     list.appendChild(item);
     setTimeout(() => item.classList.add('show'), 50);

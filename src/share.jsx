@@ -147,7 +147,9 @@ function ShareApp() {
       tripName: data.tripName || '分账演示',
       members: (data.members || []).map(m => ({
         id: m.id,
-        name: m.name
+        name: m.name,
+        isGroup: !!m.isGroup,
+        member_count: m.member_count || (m.isGroup ? 2 : 1)
       })),
       expenses: (data.expenses || []).map(exp => ({
         id: exp.id,
