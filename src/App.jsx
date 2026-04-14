@@ -91,7 +91,7 @@ function App() {
     setTimeout(() => setWarningMessage(null), 3000);
   };
 
-  const openDemoWindow = () => {
+  const openAnimationWindow = () => {
     if (!activeTrip) return;
     const payload = {
       tripName: activeTrip.name || '分账演示',
@@ -108,9 +108,9 @@ function App() {
       }))
     };
     const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
-    const demoUrl = new URL('./demo-animation.html', window.location.href);
-    demoUrl.searchParams.set('data', encoded);
-    window.open(demoUrl.toString(), '_blank', 'noopener,noreferrer');
+    const animationUrl = new URL('./animation.html', window.location.href);
+    animationUrl.searchParams.set('data', encoded);
+    window.open(animationUrl.toString(), '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => { window.saveTrips(trips); }, [trips]);
@@ -427,7 +427,7 @@ function App() {
             {/* 总支出 - 大字体突出显示 */}
             <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 mb-3 relative">
               <button
-                onClick={openDemoWindow}
+                onClick={openAnimationWindow}
                 className="absolute top-3 right-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md hover:shadow-lg transition-shadow"
                 title="查看分账演示"
               >

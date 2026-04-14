@@ -390,16 +390,16 @@ const [memberCountInput, setMemberCountInput] = useState('2');
 ```javascript
 const payload = { tripName, members, expenses };
 const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
-const demoUrl = new URL('./demo-animation.html', window.location.href);
-demoUrl.searchParams.set('data', encoded);
-window.open(demoUrl.toString(), '_blank', 'noopener,noreferrer');
+const animationUrl = new URL('./animation.html', window.location.href);
+animationUrl.searchParams.set('data', encoded);
+window.open(animationUrl.toString(), '_blank', 'noopener,noreferrer');
 ```
 
 演示页解码后回放真实数据；若缺失或损坏则回退到内置示例数据。
 
 #### 页面拆分
-- `demo-animation.html` 只保留结构和样式
-- `src/demo-animation-page.js` 负责完整动画逻辑与参数解析
+- `animation.html` 只保留结构和样式
+- `src/animation-page.js` 负责完整动画逻辑与参数解析
 
 这样便于维护，避免 HTML 内联脚本过长难以迭代。
 
@@ -413,7 +413,7 @@ window.open(demoUrl.toString(), '_blank', 'noopener,noreferrer');
 
 #### 兼容性要点
 - `window.open` 可能被拦截，分享页需提供 fallback：
-  - 新窗口失败时 `window.location.href = demoUrl`
+  - 新窗口失败时 `window.location.href = animationUrl`
 - 每次页面结构变化后建议递增 `?v=...` 防缓存。
 
 ## 部署方案
@@ -449,8 +449,8 @@ const Share2 = ({ size = 20 }) => <span style={{ fontSize: size }}>🔗</span>;
 ## 更新日志
 
 ### 2026-04-14
-- 🎬 分账演示改为独立页面（`demo-animation.html`）
-  - 新增 `src/demo-animation-page.js` 承载演示逻辑
+- 🎬 分账演示改为独立页面（`animation.html`）
+  - 新增 `src/animation-page.js` 承载演示逻辑
   - 支持通过 URL 参数接收实时账单数据回放
 - 🧭 主结算页与分享页统一入口
   - 按钮改为“总支出”卡片右上角小按钮（`🎬 演示`）
