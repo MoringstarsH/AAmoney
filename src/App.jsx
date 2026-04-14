@@ -262,8 +262,8 @@ function App() {
   const [shareUrl, setShareUrl] = useState('');
   const [generatedTime, setGeneratedTime] = useState('');
   
-  // 生成分享链接（使用短字段名压缩数据）
-  const generateShareData = () => {
+  // 生成分享链接：优先短链，失败回退到兼容长链接
+  const generateShareData = async () => {
     const time = new Date().toLocaleString('zh-CN', {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit'
@@ -294,9 +294,28 @@ function App() {
     };
     
     const encoded = btoa(encodeURIComponent(JSON.stringify(compressedData)));
-    const url = `${window.location.origin}/share.html?data=${encoded}`;
-    setShareUrl(url);
-    return url;
+    const fallbackUrl = `${window.location.origin}/share.html?data=${encoded}`;
+
+    try {
+      const apiUrl = new URL('./api/share', window.location.href);
+      const response = await fetch(apiUrl.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(compressedData)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result && typeof result.url === 'string' && result.url) {
+          setShareUrl(result.url);
+          return result.url;
+        }
+      }
+    } catch (error) {
+      // Ignore and fallback to long URL.
+    }
+
+    setShareUrl(fallbackUrl);
+    return fallbackUrl;
   };
 
   // 保存到相册（截图）
@@ -342,8 +361,8 @@ function App() {
   };
 
   // 分享给朋友
-  const handleShare = () => {
-    const url = generateShareData();
+  const handleShare = async () => {
+    await generateShareData();
     setShareModalOpen(true);
   };
 

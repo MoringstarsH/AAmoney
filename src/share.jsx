@@ -51,45 +51,84 @@ function calculateSettlements(members, expenses) {
   return { balances, settlements };
 }
 
+function decodeSharePayload(decoded) {
+  if (decoded && Array.isArray(decoded.members) && Array.isArray(decoded.expenses)) {
+    return decoded;
+  }
+
+  const members = (decoded.m || []).map((m, idx) => ({
+    id: 'm' + idx,
+    name: m.n,
+    isGroup: m.g === 1,
+    member_count: m.c
+  }));
+
+  const expenses = (decoded.e || []).map((exp, idx) => {
+    const payerIdx = Number(exp.p);
+    const payerId = Number.isInteger(payerIdx) && members[payerIdx] ? members[payerIdx].id : (members[0]?.id || '');
+    const beneficiaryIds = (Array.isArray(exp.b) ? exp.b : [])
+      .map(v => Number(v))
+      .filter(v => Number.isInteger(v) && members[v])
+      .map(v => members[v].id);
+    if (beneficiaryIds.length === 0 && payerId) {
+      beneficiaryIds.push(payerId);
+    }
+    return {
+      id: 'e' + idx,
+      description: exp.d,
+      amount: Number(exp.a) || 0,
+      payerId,
+      beneficiaryIds
+    };
+  });
+
+  return {
+    tripName: decoded.n,
+    createdAt: decoded.c,
+    members,
+    expenses
+  };
+}
+
 function ShareApp() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const dataParam = urlParams.get('data');
-      if (!dataParam) {
-        setError('无效的分享链接');
-        return;
+    let cancelled = false;
+
+    const loadData = async () => {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shortKey = urlParams.get('k');
+
+        if (shortKey) {
+          const apiUrl = new URL(`./api/share/${encodeURIComponent(shortKey)}`, window.location.href);
+          const response = await fetch(apiUrl.toString());
+          if (!response.ok) {
+            if (!cancelled) setError('链接已失效或不存在');
+            return;
+          }
+          const payload = await response.json();
+          const decoded = payload?.data || payload;
+          if (!cancelled) setData(decodeSharePayload(decoded));
+          return;
+        }
+
+        const dataParam = urlParams.get('data');
+        if (!dataParam) {
+          if (!cancelled) setError('无效的分享链接');
+          return;
+        }
+        const decoded = JSON.parse(decodeURIComponent(atob(dataParam)));
+        if (!cancelled) setData(decodeSharePayload(decoded));
+      } catch (e) {
+        if (!cancelled) setError('链接已损坏或过期');
       }
-      const decoded = JSON.parse(decodeURIComponent(atob(dataParam)));
-      
-      // 解压数据：将短字段名还原为完整格式
-      const members = (decoded.m || []).map((m, idx) => ({
-        id: 'm' + idx,
-        name: m.n,
-        isGroup: m.g === 1,
-        member_count: m.c
-      }));
-      
-      const decompressedData = {
-        tripName: decoded.n,
-        createdAt: decoded.c,
-        members: members,
-        expenses: (decoded.e || []).map((exp, idx) => ({
-          id: 'e' + idx,
-          description: exp.d,
-          amount: exp.a,
-          payerId: 'm' + exp.p,                              // 索引转为 ID
-          beneficiaryIds: (exp.b || []).map(bid => 'm' + bid) // 索引转为 ID
-        }))
-      };
-      
-      setData(decompressedData);
-    } catch (e) {
-      setError('链接已损坏或过期');
-    }
+    };
+
+    loadData();
+    return () => { cancelled = true; };
   }, []);
 
   const { balances, settlements } = useMemo(() => {
