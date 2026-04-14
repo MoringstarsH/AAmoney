@@ -482,3 +482,83 @@ const Share2 = ({ size = 20 }) => <span style={{ fontSize: size }}>🔗</span>;
 - [Tailwind CSS CDN](https://tailwindcss.com/)
 - [html2canvas](https://html2canvas.hertzen.com/)
 - [AAmoney GitHub](https://github.com/MoringstarsH/AAmoney)
+
+## 12. Cloudflare KV 短链接分享（2026-04-14 补充）
+
+### 目标
+将分享链接从超长 `share.html?data=...` 改为短链 `/s/<key>`，并保留旧链接兼容。
+
+### 前端策略
+1. 生成压缩数据（`n/c/m/e`）后，优先 `POST /api/share`。
+2. 接口成功：使用返回的 `url`（例如 `/s/Ab3xY7`）。
+3. 接口失败：回退到旧的 `share.html?data=...`，保证可用性。
+
+### 分享页兼容策略
+- `share.jsx` 先读 `?k=`：请求 `GET /api/share/:key`。
+- 若没有 `k`，再读旧参数 `?data=`。
+- 这样历史链接和新短链都能打开。
+
+### Functions 路由约定
+- `functions/api/share.js`
+  - `onRequestPost`：写入 `SHARE_KV`，生成 6 位短码，返回 `{ ok, key, url }`
+- `functions/api/share/[key].js`
+  - `onRequestGet`：按 key 读取并返回 payload
+- `functions/s/[key].js`
+  - `onRequestGet`：302 跳转到 `/share.html?k=<key>`
+
+### Cloudflare 绑定要求
+- Pages > 设置 > 绑定
+- 资源类型：KV 命名空间
+- 变量名：`SHARE_KV`
+- 命名空间：选择已创建的 KV（例如 `moneyName`）
+- KV 内不需要手工预填“密钥/值”，运行时由接口自动写入。
+
+## 13. 动画结算与结算方案一致性（2026-04-14 补充）
+
+### 问题根因
+动画页原先按“人数均分”计算：`amount / beneficiaryIds.length`，
+但主结算规则是“加权人数均分”（单人=1，小组=`member_count`），导致金额不一致。
+
+### 修复原则
+1. 动画页必须使用和 `settlement.js` 同口径的加权逻辑。
+2. 打开动画时必须透传成员权重字段：`isGroup`、`member_count`。
+3. 金额展示统一保留 2 位小数（结算条目/浮字/说明文案）。
+
+### 关键实现点
+- `App.jsx` / `share.jsx` 的 `openAnimationWindow`：
+  - `members` 透传：`id, name, isGroup, member_count`
+- `src/animation-page.js`：
+  - 新增 `getMemberWeight(memberId)`
+  - `processExpense()` 改为：
+    - `weightedTotal = ΣmemberWeight`
+    - `perUnit = amount / weightedTotal`
+    - 每个受益人扣减 `perUnit * weight`
+    - 付款人增加 `amount`
+  - `showSettlement()` 中 debtors/creditors 排序与结算迭代保持稳定
+
+### 验证样例（周末露营）
+- 总支出：600
+- 受益：小李(1)、小王(1)、情侣组(2)
+- 单人应付：600 / 4 = 150
+- 结算结果：
+  - 情侣组 -> 小王 300
+  - 小李 -> 小王 150
+
+## 14. Cloudflare 部署失败快速排查（unable to submit build job）
+
+当部署在 “Initializing build environment” 即失败，且日志为
+`Failed: unable to submit build job`，优先排查平台侧与集成侧：
+
+1. Retry deployment（间隔 1-2 分钟重试）
+2. 检查 GitHub App 权限是否包含目标仓库
+3. 断开并重连 Cloudflare Pages 的 GitHub 集成
+4. 检查 Pages 构建配额与并发限制
+5. 急需上线可使用 Direct Upload 临时绕过 Git 集成
+
+## 15. 缓存版本号规范（强制刷新）
+
+每次改动页面脚本后都递增版本号，避免 CDN 缓存导致“已修复但线上未生效”：
+
+- `index.html` 中 `src/App.jsx?v=...`
+- `share.html` 中 `src/share.jsx?v=...`
+- `animation.html` 中 `src/animation-page.js?v=...`
